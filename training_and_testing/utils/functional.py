@@ -1,5 +1,19 @@
+from pickle import TRUE
 import scipy.io as sio
 import numpy as np
+import torch
+import math
+
+def quat2euler(w, x, y, z):
+    roll = math.atan2(2*(w*x + y*z), 1-2*(x*x + y*y))
+    pitch = math.asin(2*(w*y - z*x))
+    yaw = math.atan2(2*(w*z + y*x), 1-2*(z*z + y*y))
+
+    roll = roll*180 / math.pi
+    pitch = pitch*180 / math.pi
+    yaw = yaw*180 / math.pi
+
+    return [yaw, pitch, roll]
 
 def get_pt_ypr_from_mat(mat_path, pt3d=False):
     # Get 2D landmarks
@@ -24,3 +38,7 @@ def get_pt_ypr_from_mat(mat_path, pt3d=False):
     roll = pose[2] * 180 / np.pi
 
     return (x_min, y_min, x_max, y_max), (yaw, pitch, roll)
+
+def l2_norm(input__, axis=1):
+    norm = torch.norm(input__, 2, axis, True)
+    return torch.div(input__, norm)

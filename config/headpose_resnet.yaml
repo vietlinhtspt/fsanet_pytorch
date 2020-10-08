@@ -1,8 +1,8 @@
-Net:
-  net_type: "FSANET"
+Net: # ["FSANET", "ResNet"]
+  net_type: "ResNet" 
   n_class: "3"
 
-Data: # ["BIWI", "ALFW2000", "300WLP"]
+Data: # ["BIWI", "AFLW2000", "300WLP"]
   train_dir: "/home/linhnv/projects/RankPose/data"
   train_name: "300w_lp_for_rank.txt"
   train_type: "300W_LP"
@@ -12,6 +12,7 @@ Data: # ["BIWI", "ALFW2000", "300WLP"]
   val_type: "AFLW2000"
 
   target_size: 224
+  num_worker: 4
 
 Train:
   num_epoch: 80
