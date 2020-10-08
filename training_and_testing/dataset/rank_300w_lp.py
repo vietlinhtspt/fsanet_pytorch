@@ -14,7 +14,8 @@ from utils.preprocess import preprocess, change_bbox
 from utils.functional import get_pt_ypr_from_mat
 
 class Rank300WLPDataset(Dataset):
-    def __init__(self, base_dir=None, filename=None, n_class=3, target_size=224, affine_augmenter=None, image_augmenter=None, debug=False):
+    def __init__(self, base_dir=None, filename=None, n_class=3, target_size=224, 
+        affine_augmenter=None, image_augmenter=None, debug=False):
         print("[INFO] Initing Rank300WLPDataset.")
         self.base_dir = Path(base_dir)
         self.n_class = n_class
