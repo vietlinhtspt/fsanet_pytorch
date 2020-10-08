@@ -2,7 +2,7 @@ Net:
   net_type: "FSANET"
   n_class: "3"
 
-Data:
+Data: # ["BIWI", "ALFW2000", "300WLP"]
   train_dir: "/home/linhnv/projects/RankPose/data"
   train_name: "300w_lp_for_rank.txt"
   train_type: "300W_LP"
