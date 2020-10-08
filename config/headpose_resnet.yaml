@@ -1,0 +1,32 @@
+Net:
+  net_type: "FSANET"
+  n_class: "3"
+
+Data:
+  train_dir: "/home/linhnv/projects/RankPose/data"
+  train_name: "300w_lp_for_rank.txt"
+  train_type: "300W_LP"
+
+  val_dir: "/home/linhnv/projects/RankPose/data"
+  val_name: "aflw2000_filename.txt"
+  val_type: "AFLW2000"
+
+  target_size: 224
+
+Train:
+  num_epoch: 80
+  batch_size: 16
+  val_every: 1
+  resume: False
+  pretrained_path:
+  loss_type: "RANK" # ["RANK", "MSE"]
+  optimizer:
+    mode: "adam"
+    base_lr: 0.0001
+    t_max: 10
+
+Evaluate:
+  eval_dir: "/home/linhnv/projects/RankPose/data"
+  eval_name: "biwi_dataset_list.txt"
+  eval_type: "BIWI"
+
