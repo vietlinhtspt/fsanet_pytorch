@@ -165,6 +165,7 @@ def main():
 
                 _tqdm.set_postfix(OrderedDict(loss=f'{loss.item():.3f}', mae=f'{diff:.1f}'))
                 train_losses.append(loss.item())
+                history_ploter(train_losses, log_dir.joinpath('loss.png'))
                 train_diffs.append(diff)
 
                 loss.backward()
@@ -198,19 +199,14 @@ def main():
                         
                         _tqdm.set_postfix(OrderedDict(mae=f'{diff:.2f}'))
                         # _tqdm.set_postfix(OrderedDict(loss=f'{loss.item():.3f}', d_y=f'{np.mean(diff[:,0]):.1f}', d_p=f'{np.mean(diff[:,1]):.1f}', d_r=f'{np.mean(diff[:,2]):.1f}'))
-                        valid_losses.append(0)
+                       
                         valid_diffs.append(diff)
-
-            valid_loss = np.mean(valid_losses)
+            
             valid_diff = np.mean(valid_diffs)
-            loss_history.append([train_loss, valid_loss])
-            history_ploter(loss_history, log_dir.joinpath('loss.png'))
-
-            print(f'[INFO] valid seg loss: {valid_loss}')
+            loss_history.append([train_diff, valid_diff])
+            history_ploter(loss_history, log_dir.joinpath('diff.png'))
             print(f'[INFO] valid diff: {valid_diff}')
 
-            best_metrics = valid_diff
-            print('Best Model!\n')
             torch.save(model.state_dict(), output_dir.joinpath(f'model_epoch_{i_epoch}_{valid_diff}.pth'))
             torch.save({
                 'epoch': i_epoch,
@@ -220,7 +216,6 @@ def main():
                 }, output_dir.joinpath(f'checkpoint_epoch_{i_epoch}_{valid_diff}.pth'))
 
         else:
-            valid_loss = None
             valid_diff = None
 
 if __name__ == "__main__":
