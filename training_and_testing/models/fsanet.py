@@ -447,16 +447,19 @@ class FSANet(nn.Module):
         #Output: list of Tensors containing feature maps Uk
         #Output Shape: [U1,U2,U3] where U1=U2=U3 has shape [batch,64,8,8]
         x = self.msms(x)
+        # print("msms: ", x)
 
         #Input: Output of msms module
         #Output: Grouped feature maps Ubark
         #Output Shape: Ubark has shape [batch,21,64]
         x = self.fgsm(x)
+        # print("fgms", x)
 
         #Input: Output of fgsm module
         #Output: 3 capsules with shortened dims each representing a stage
         #Output Shape: capsules has shape [batch,3,16]
         x = self.caps_layer(x)
+        # print(x)
 
         #Input: Output of caps_layer module
         #Output: each stage capsule seprated as 1d vector

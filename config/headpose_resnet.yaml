@@ -19,14 +19,14 @@ Data: # ["BIWI", "AFLW2000", "300WLP"]
 
 Train:
   num_epoch: 80
-  batch_size: 16
+  batch_size: 32
   val_every: 1
   resume: False
   pretrained_path:
-  loss_type: "RANK" # ["RANK", "MSE"]
+  loss_type: "MSE" # ["RANK", "MSE"]
   optimizer:
     mode: "adam"
-    base_lr: 0.0001
+    base_lr: 0.001
     t_max: 10
 
 Evaluate:

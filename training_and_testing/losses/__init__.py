@@ -34,3 +34,6 @@ class Criterion(nn.Module):
             angles_loss = self.criterion(preds[0],labels[0]) + self.criterion(preds[1],labels[1])
             
             return angles_loss + 1 * rank_loss + 0.1 * class_loss
+        
+        elif self.loss_type == "MSE":
+            return self.criterion(preds[0],labels[0]) + self.criterion(preds[1],labels[1])

@@ -5,7 +5,7 @@ def load_model(net_type='ResNet', **kwargs):
     if net_type == 'ResNet':
         model = ResNet(**kwargs)
     elif net_type == "FSANET":
-        model = FSANet().to('cuda')
+        model = FSANet()
     else:
         raise NotImplementedError
 

@@ -13,6 +13,7 @@ from dataset import load_dataset
 
 from models import load_model
 from losses import Criterion
+from logger.plot import history_ploter
 
 from utils.optimizer import create_optimizer
 from utils.metrics import calculate_diff
@@ -36,7 +37,7 @@ def main():
     data_config = config['Data']
     train_config = config['Train']
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
 
     # Config for data:
     train_dir = data_config["train_dir"]
@@ -64,8 +65,11 @@ def main():
 
     model = load_model(**net_config)
 
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # To device
     model = model.to(device)
+    # if torch.cuda.is_available():
+    #     model.cuda()
 
     modelname = config_path.stem
     output_dir = Path('../model_train') / modelname
@@ -77,7 +81,7 @@ def main():
     # logger.debug(config)
     # logger.info(f'Device: {device}')
     # logger.info(f'Max Epoch: {max_epoch}')
-
+    
     loss_fn = Criterion(loss_type=loss_type).to(device)
     params = model.parameters()
     optimizer, scheduler = create_optimizer(params, **optimizer_config)
@@ -101,16 +105,43 @@ def main():
     val_dataset = load_dataset(data_type=val_type, base_dir=val_dir, filename=val_name, n_class=net_config['n_class'], target_size=target_size, debug=False )
     
     train_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, pin_memory=True, drop_last=True)
-    valid_loader = DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=num_workers, pin_memory=True)
+    valid_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
 
     if torch.cuda.is_available():
         model = nn.DataParallel(model)
 
-    best_metrics = float('inf')
+    # model = model.load_state_dict(torch.load("/home/linhnv/projects/fsanet_pytorch/model_train/headpose_resnet/model_epoch_77_6.682497448080261.pth"))    
+    # optimizer = optimizer.load_state_dict(torch.load("/home/linhnv/projects/fsanet_pytorch/model_train/headpose_resnet/opt_epoch_77_6.682497448080261.pth"))
 
+    # Restore model
+    # torch.save({
+    #             'epoch': i_epoch,
+    #             'model_state_dict': model.state_dict(),
+    #             'optimizer_state_dict': optimizer.state_dict(),
+    #             'loss_history': loss_history,
+    #             }, output_dir.joinpath(f'checkpoint_epoch_{i_epoch}_{valid_diff}.pth'))
+
+    if False:
+
+        print("[INFO] resume training.")
+        # model_path = output_dir.joinpath(f'model_epoch_{start_epoch-1}.pth')
+        # logger.info(f'Resume from {model_path}')
+        model_path = "/home/linhnv/projects/fsanet_pytorch/model_train/headpose_resnet/model_epoch_67_5.604301367075212.pth"
+        param = torch.load(model_path, map_location='cpu')
+        model.load_state_dict(param)
+        model.to(device)
+        del param
+        # opt_path = output_dir.joinpath(f'opt_epoch_{start_epoch-1}.pth')
+        opt_path = "/home/linhnv/projects/fsanet_pytorch/model_train/headpose_resnet/opt_epoch_67_5.604301367075212.pth"
+        param = torch.load(opt_path)
+        optimizer.load_state_dict(param)
+        del param
+
+    best_metrics = float('inf')
+    loss_history = []
     # Train
     for i_epoch in range(0, num_epoch):
-
+        print(f"Epoch: {i_epoch}")
         train_losses = []
         train_diffs = []
         model.train()
@@ -141,6 +172,7 @@ def main():
 
         train_loss = np.mean(train_losses)
         train_diff = np.nanmean(train_diffs)
+        
         print(f'[INFO] train loss: {train_loss}')
         print(f'[INFO] train diff: {train_diff}')
 
@@ -171,22 +203,21 @@ def main():
 
             valid_loss = np.mean(valid_losses)
             valid_diff = np.mean(valid_diffs)
+            loss_history.append([train_loss, valid_loss])
+            history_ploter(loss_history, log_dir.joinpath('loss.png'))
+
             print(f'[INFO] valid seg loss: {valid_loss}')
             print(f'[INFO] valid diff: {valid_diff}')
 
-            if best_metrics >= valid_diff:
-                best_metrics = valid_diff
-                print('Best Model!\n')
-                torch.save(model.state_dict(), output_dir.joinpath(f'model_epoch_{i_epoch}_{valid_diff}.pth'))
-                torch.save(optimizer.state_dict(), output_dir.joinpath(f'opt_epoch_{i_epoch}_{valid_diff}.pth'))
-            elif len(valid_diffs) > 9:
-                if (valid_diff < min(valid_diffs[-9:])):
-                    print("Best in 10 last models.\n")
-                    torch.save(model.state_dict(), output_dir.joinpath(f'model_epoch_{i_epoch}_{valid_diff}.pth'))
-                    torch.save(optimizer.state_dict(), output_dir.joinpath(f'opt_epoch_{i_epoch}_{valid_diff}.pth'))
-            elif (i_epoch >= 85):
-                torch.save(model.state_dict(), output_dir.joinpath(f'model_epoch_{i_epoch}_{valid_diff}.pth'))
-                torch.save(optimizer.state_dict(), output_dir.joinpath(f'opt_epoch_{i_epoch}_{valid_diff}.pth'))
+            best_metrics = valid_diff
+            print('Best Model!\n')
+            torch.save(model.state_dict(), output_dir.joinpath(f'model_epoch_{i_epoch}_{valid_diff}.pth'))
+            torch.save({
+                'epoch': i_epoch,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'loss_history': loss_history,
+                }, output_dir.joinpath(f'checkpoint_epoch_{i_epoch}_{valid_diff}.pth'))
 
         else:
             valid_loss = None
