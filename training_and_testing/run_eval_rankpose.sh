@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=1 python3 FSANET_evaluate.py ../config/headpose_resnet.yaml

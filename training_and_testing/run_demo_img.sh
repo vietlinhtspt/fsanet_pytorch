@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=0 python demo_img.py  "/home/linhnv/projects/fsanet_pytorch/config/headpose_resnet.yaml"
