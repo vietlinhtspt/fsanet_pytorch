@@ -46,8 +46,5 @@ class ResNet(nn.Module):
         x = self.dropout(x)
         
         angles = self.fc_angles(x)
-
-        if self.n_class == 4:
-            angles = l2_norm(angles)
         
         return angles

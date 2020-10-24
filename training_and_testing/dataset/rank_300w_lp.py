@@ -17,6 +17,7 @@ class Rank300WLPDataset(Dataset):
     def __init__(self, base_dir=None, filename=None, n_class=3, target_size=224, 
         affine_augmenter=None, image_augmenter=None, debug=False):
         print("[INFO] Initing Rank300WLPDataset.")
+        print(base_dir, filename, n_class, target_size, debug)
         self.base_dir = Path(base_dir)
         self.n_class = n_class
         self.target_size = target_size
@@ -69,12 +70,16 @@ class Rank300WLPDataset(Dataset):
 
     def __getitem__(self, index):
         index = index % len(self.ids)
+        # print(f"[INFO] Getting index: {index}")
         # if self.debug:
         #     print(f"[INFO] self.ids_index[index]={self.ids_index}")
         idxs = np.random.choice(self.ids_index[index], size=2, replace=False)
 
         img_path1 = self.base_dir / (self.ids[index]+'_%d.jpg' % idxs[0])
         img_path2 = self.base_dir / (self.ids[index]+'_%d.jpg' % idxs[1])
+
+        # print(f"[INFO] Path one: {img_path1}")
+        # print(f"[INFO] Path two: {img_path2}")
 
         # scale = np.random.random_sample() * 0.2 + 0.1
         scale = np.random.random_sample() * 0.2 + 1.4
@@ -131,34 +136,53 @@ if __name__ == '__main__':
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
     from torch.utils.data import DataLoader
+    from tqdm import tqdm
+    import random
 
-    affine_augmenter = None
-    image_augmenter = albu.Compose([albu.GaussNoise((0, 25), p=.5),
-                                    albu.RandomBrightnessContrast(0.4, 0.3, p=1),
-                                    albu.JpegCompression(90, 100, p=0.5)])
-    #image_augmenter = None
-    image_augmenter = albu.Compose([albu.RandomBrightnessContrast(0.4,0.3,p=0.5),
-                                    albu.RandomGamma(p=0.3),
-                                    albu.CLAHE(p=0.1),
-                                    albu.HueSaturationValue(hue_shift_limit=20, sat_shift_limit=20, val_shift_limit=20,p=0.2),
+    seed = 2020
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.random.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+    affine_augmenter = albu.Compose([albu.GaussNoise(var_limit=(0,25),p=.2),
+                                    albu.GaussianBlur(3, p=0.2),
+                                    albu.JpegCompression(50, 100, p=0.2)])
+
+    image_augmenter = albu.Compose([
+                                    albu.OneOf([
+                                        albu.RandomBrightnessContrast(0.25,0.25),
+                                        albu.CLAHE(clip_limit=2),
+                                        albu.RandomGamma(),
+                                        ], p=0.5),
+                                    albu.HueSaturationValue(hue_shift_limit=20, sat_shift_limit=30, val_shift_limit=20,p=0.2),
+                                    albu.RGBShift(p=0.2),
                                     ])
     dataset = Rank300WLPDataset(base_dir="/home/linhnv/projects/RankPose/data", affine_augmenter=affine_augmenter, image_augmenter=image_augmenter,
-                             filename='300w_lp_for_rank.txt', target_size=64, debug=True)
-    dataloader = DataLoader(dataset, batch_size=8, shuffle=True)
+                             filename='300w_lp_for_rank.txt', target_size=224, debug=False)
+    # dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+    dataloader = DataLoader(dataset, batch_size=32, num_workers=4, pin_memory=True, drop_last=True)
     print(len(dataset))
 
-    for i, batched in enumerate(dataloader):
-        img1, img2 = batched
-        for j in range(8):
-            img = img1[j].numpy()
-            img = img.astype('uint8')
-            img = Image.fromarray(img)
-            img.save('300W_img1_%d_%d.jpg'%(i, j))
-            img = img2[j].numpy()
-            img = img.astype('uint8')
-            img = Image.fromarray(img)
-            img.save('300W_img2_%d_%d.jpg'%(i, j))
-        if i > 2:
-            break
+    dir_path = Path("./train_img")
+    dir_path.mkdir(parents=True, exist_ok=True)
+
+    # for i, batched in enumerate(dataloader):
+    #     img1, img2,  lbl1, lbl2, label = batched
+    #     for j in range(8):
+    #         img = img1[j].numpy()
+    #         img = img.astype('uint8')
+    #         img = Image.fromarray(img)
+    #         # img.save(dir_path / f'300W_img1_{i}_{j}.jpg')
+    #         img = img2[j].numpy()
+    #         img = img.astype('uint8')
+    #         img = Image.fromarray(img)
+    #         # img.save(dir_path / '300W_img2_{i}_{j}.jpg')
+    #     if i > 2:
+    #         break
+
+    with tqdm(dataloader) as _tqdm:
+        for batched in _tqdm:
+            print(".")
 
 

@@ -99,16 +99,18 @@ if __name__ == '__main__':
                                     ])
     dataset = AFLW2000Dataset(base_dir="/home/linhnv/projects/RankPose/data", affine_augmenter=affine_augmenter, image_augmenter=image_augmenter,
                              filename='aflw2000_filename.txt', target_size=224, debug=True)
-    dataloader = DataLoader(dataset, batch_size=8, shuffle=True)
+    # dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+    dataloader = DataLoader(dataset, batch_size=32, shuffle=False, num_workers=4, pin_memory=True)
+
     print(len(dataset))
 
     for i, batched in enumerate(dataloader):
         images, labels = batched
         print(images.shape)
-        for j in range(8):
-            img = images[j].numpy()
-            img = img.astype('uint8')
-            img = Image.fromarray(img)
-            img.save('tmp/%d_%d.jpg'%(i, j))
-        if i > 2:
-            break
+        # for j in range(8):
+        #     img = images[j].numpy()
+        #     img = img.astype('uint8')
+        #     img = Image.fromarray(img)
+        #     img.save('tmp/%d_%d.jpg'%(i, j))
+        # # if i > 2:
+        # #     break

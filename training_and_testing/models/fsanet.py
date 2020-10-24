@@ -430,7 +430,7 @@ class FSANet(nn.Module):
         routings = 2
         mdim = 5
 
-        self.msms = MultiStreamMultiStage(3) #channels: rgb
+        self.msms = MultiStreamMultiStage(3) #channels: rgb 
         self.fgsm = FineGrainedStructureMapping(64,num_primcaps,mdim,var) #channels: feature maps
         self.caps_layer = CapsuleLayer1d(num_primcaps,primcaps_dim,num_out_capsule,out_capsule_dim,routings)
         self.eaf = ExtractAggregatedFeatures(num_out_capsule)

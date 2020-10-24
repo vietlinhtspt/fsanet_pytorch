@@ -42,3 +42,15 @@ def get_pt_ypr_from_mat(mat_path, pt3d=False):
 def l2_norm(input__, axis=1):
     norm = torch.norm(input__, 2, axis, True)
     return torch.div(input__, norm)
+
+#yaw, pitch, roll -> W, Z, Y, X
+def euler2quat(yaw, pitch, roll):
+    roll = roll * math.pi / 180
+    pitch = pitch * math.pi / 180
+    yaw = yaw * math.pi / 180
+
+    x = math.sin(pitch / 2) * math.sin(yaw / 2) * math.cos(roll / 2) + math.cos(pitch / 2) * math.cos(yaw / 2) * math.sin(roll / 2)
+    y = math.sin(pitch / 2) * math.cos(yaw / 2) * math.cos(roll / 2) + math.cos(pitch / 2) * math.sin(yaw / 2) * math.sin(roll / 2)
+    z = math.cos(pitch / 2) * math.sin(yaw / 2) * math.cos(roll / 2) - math.sin(pitch / 2) * math.cos(yaw / 2) * math.sin(roll / 2)
+    w = math.cos(pitch / 2) * math.cos(yaw / 2) * math.cos(roll / 2) - math.sin(pitch / 2) * math.sin(yaw / 2) * math.sin(roll / 2)
+    return [w, x, y, z]
