@@ -15,7 +15,7 @@ from utils.functional import get_pt_ypr_from_mat
 
 class Rank300WLPDataset(Dataset):
     def __init__(self, base_dir=None, filename=None, n_class=3, target_size=224, 
-        affine_augmenter=None, image_augmenter=None, debug=False):
+        affine_augmenter=None, image_augmenter=None, debug=False, paired_img=False):
         print("[INFO] Initing Rank300WLPDataset.")
         print(base_dir, filename, n_class, target_size, debug)
         self.base_dir = Path(base_dir)
@@ -24,6 +24,7 @@ class Rank300WLPDataset(Dataset):
         self.affine_augmenter = affine_augmenter
         self.image_augmenter = image_augmenter
         self.debug = debug
+        self.paired_img = paired_img
 
         self.ids = []
         self.bboxs = []
@@ -68,7 +69,53 @@ class Rank300WLPDataset(Dataset):
     def __len__(self):
         return len(self.ids) * 5
 
-    def __getitem__(self, index):
+    def get_one_img(self, index):
+        index = index % len(self.ids)
+        # print(f"[INFO] Getting index: {index}")
+        # if self.debug:
+        #     print(f"[INFO] self.ids_index[index]={self.ids_index}")
+        idxs = np.random.choice(self.ids_index[index], size=2, replace=False)
+
+        img_path1 = self.base_dir / (self.ids[index]+'_%d.jpg' % idxs[0])
+        
+
+        # print(f"[INFO] Path one: {img_path1}")
+        # print(f"[INFO] Path two: {img_path2}")
+
+        # scale = np.random.random_sample() * 0.2 + 0.1
+        scale = np.random.random_sample() * 0.2 + 1.4
+        bbox1 = change_bbox(self.bboxs[index][idxs[0]], scale=scale, use_forehead=False)
+        
+        img1 = np.array(Image.open(img_path1).crop(bbox1))
+
+        lbl1 = self.labels[index][idxs[0]]
+
+
+        # ImageAugment (RandomBrightness, AddNoise...)
+        if self.image_augmenter:
+            augmented = self.image_augmenter(image=img1)
+            img1 = augmented['image']
+
+        # Resize (Scale & Pad & Crop)
+        if self.resizer:
+            resized = self.resizer(image=img1)
+            img1 = resized['image']
+        # AffineAugment (Horizontal Flip, Rotate...)
+        if self.affine_augmenter:
+            augmented = self.affine_augmenter(image=img1)
+            img1 = augmented['image']
+
+        if self.debug:
+            # print(label)
+            return img1
+        else:
+            img1 = preprocess(img1)
+            img1 = torch.FloatTensor(img1).permute(2, 0, 1)
+            lbl1 = torch.FloatTensor(lbl1)
+            
+            return img1, lbl1
+
+    def get_two_imgs(self, index):
         index = index % len(self.ids)
         # print(f"[INFO] Getting index: {index}")
         # if self.debug:
@@ -129,6 +176,12 @@ class Rank300WLPDataset(Dataset):
             lbl2 = torch.FloatTensor(lbl2)
             
             return img1, img2, lbl1, lbl2, label
+
+    def __getitem__(self, index):
+        if self.paired_img:
+            return self.get_two_imgs(index)
+        else:
+            return self.get_one_img(index)
 
 
 if __name__ == '__main__':
