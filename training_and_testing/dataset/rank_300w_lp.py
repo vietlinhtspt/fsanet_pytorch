@@ -37,7 +37,7 @@ class Rank300WLPDataset(Dataset):
             print("[INFO] Loading data.")
             for i, line in enumerate(tqdm.tqdm(f.readlines()[:100])):
                 ls = line.strip()
-                # print(ls)
+                print(ls)
 
                 id_index = []
                 bboxs = []
@@ -118,7 +118,12 @@ class Rank300WLPDataset(Dataset):
         scale = np.random.random_sample() * 0.2 + 1.4
         bbox1 = change_bbox(self.bboxs[index][0], scale=scale, use_forehead=False)
         
-        img1 = np.array(Image.open(img_path1).crop(bbox1))
+        # print(bbox1)
+        # Check bbox, if is CMU dataset, bbox = (0, 0, 0, 0)
+        if bbox1 == (0, 0, 0, 0):
+          img1 = np.array(Image.open(img_path1))
+        else:
+          img1 = np.array(Image.open(img_path1).crop(bbox1))
 
         lbl1 = self.labels[index][0]
         # print(f"[INFO] Label: {lbl1}")
