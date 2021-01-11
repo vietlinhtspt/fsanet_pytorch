@@ -4,7 +4,7 @@ Net: # ["FSANET", "ResNet"]
 
 Data: # ["BIWI", "AFLW2000", "300WLP"]
   train_dir: "/home/linhnv/projects/RankPose/data"
-  train_name: "300w_lp_for_rank.txt"
+  train_name: "300w_lp_filename.txt"
   train_type: "300W_LP"
 
   val_dir: "/home/linhnv/projects/RankPose/data"
