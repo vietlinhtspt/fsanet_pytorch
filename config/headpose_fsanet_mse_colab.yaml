@@ -1,0 +1,36 @@
+Net: # ["FSANET", "ResNet"]
+  net_type: "FSANET" 
+  n_class: "3"
+
+Data: # ["BIWI", "AFLW2000", "300WLP"]
+  train_dir: "/content/fsanet_pytorch/data"
+  train_name: "300w_lp_filename.txt"
+  train_type: "300W_LP"
+
+  val_dir: "/content/fsanet_pytorch/data"
+  val_name: "aflw2000_filename.txt"
+  val_type: "AFLW2000"
+
+  # # "ResNet"
+  # target_size: 224
+  # "FSANET"
+  target_size: 64
+  num_worker: 4
+
+Train:
+  num_epoch: 90
+  batch_size: 32
+  val_every: 1
+  resume: False
+  pretrained_path:
+  loss_type: "MSE" # ["RANK", "MSE"]
+  optimizer:
+    mode: "adam"
+    base_lr: 0.001
+    t_max: 10
+
+Evaluate:
+  eval_dir: "/content/fsanet_pytorch/data"
+  eval_name: "biwi_dataset_list.txt"
+  eval_type: "BIWI"
+
