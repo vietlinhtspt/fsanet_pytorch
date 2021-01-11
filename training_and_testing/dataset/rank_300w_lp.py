@@ -37,7 +37,7 @@ class Rank300WLPDataset(Dataset):
             print("[INFO] Loading data.")
             for i, line in enumerate(tqdm.tqdm(f.readlines()[:100])):
                 ls = line.strip()
-                print(ls)
+                # print(ls)
 
                 id_index = []
                 bboxs = []
