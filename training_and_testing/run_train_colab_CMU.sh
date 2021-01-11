@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=0 python3 train.py ../config/headpose_fsanet_mse_colab_CMU.yaml
