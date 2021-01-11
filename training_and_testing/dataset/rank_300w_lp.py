@@ -35,7 +35,7 @@ class Rank300WLPDataset(Dataset):
 
         with open(self.base_dir/filename) as f:
             print("[INFO] Loading data.")
-            for i, line in enumerate(tqdm.tqdm(f.readlines()[:100])):
+            for i, line in enumerate(tqdm.tqdm(f.readlines()[:])):
                 ls = line.strip()
                 # print(ls)
 
