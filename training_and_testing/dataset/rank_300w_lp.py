@@ -26,6 +26,7 @@ class Rank300WLPDataset(Dataset):
         self.image_augmenter = image_augmenter
         self.debug = debug
         self.paired_img = paired_img
+        self.CMU_data = False
 
         self.ids = []
         self.bboxs = []
@@ -34,8 +35,9 @@ class Rank300WLPDataset(Dataset):
 
         with open(self.base_dir/filename) as f:
             print("[INFO] Loading data.")
-            for i, line in enumerate(tqdm.tqdm(f.readlines()[:])):
+            for i, line in enumerate(tqdm.tqdm(f.readlines()[:100])):
                 ls = line.strip()
+                # print(ls)
 
                 id_index = []
                 bboxs = []
@@ -43,21 +45,41 @@ class Rank300WLPDataset(Dataset):
 
                 for j in range(100):
                     img_path = self.base_dir / (ls + '_%d.jpg' % j) if self.paired_img else self.base_dir / (ls)
-                    if not os.path.exists(img_path):
-                        # if self.debug:
-                        #     print(f"[DEBUG] Path not exits: {img_path}")
-                        break
+                    # If CMU dataset
+                    if os.path.isfile(img_path):
+                      if not os.path.exists(img_path):
+                          # if self.debug:
+                          #     print(f"[DEBUG] Path not exits: {img_path}")
+                          break
 
-                    mat_path = str(img_path).replace('.jpg', '.mat')
-                    bbox, pose = get_pt_ypr_from_mat(mat_path)
+                      mat_path = str(img_path).replace('.jpg', '.mat')
+                      bbox, pose = get_pt_ypr_from_mat(mat_path)
 
-                    if False and (abs(pose[1])>99 or abs(pose[0])>99 or abs(pose[2])>99):
-                        continue 
+                      if False and (abs(pose[1])>99 or abs(pose[0])>99 or abs(pose[2])>99):
+                          continue
 
-                    id_index.append(j)
-                    bboxs.append(bbox)
-                    labels.append(np.array(pose))
+                      id_index.append(j)
+                      bboxs.append(bbox)
+                      labels.append(np.array(pose))
+                    else:
+                      # For CMU dataset type
+                      # CMU_data/170228_haggling_a2/170228_haggling_a2_cropped/00_2_00001566.jpg,78.16834326232015,61.04268320022404,58.21473740844096
 
+                      img_path = self.base_dir / ls.split(",")[0]
+
+                      if os.path.isfile(img_path):
+                        if not self.CMU_data:
+                          print("[INFO] Loading CMU dataset")
+                        self.CMU_data = True
+                        
+                      pose = (float(ls.split(",")[1]), float(ls.split(",")[2]), float(ls.split(",")[3]))
+                      # Image in CMU dataset is cropped, bbox info not be saved
+                      bbox = (0, 0, 0, 0)
+
+                      id_index.append(j)
+                      bboxs.append(bbox)
+                      labels.append(np.array(pose))
+                      
                     if not self.paired_img:
                         break
 
@@ -65,7 +87,10 @@ class Rank300WLPDataset(Dataset):
                 #     print(f"[DEBUG] id_index: {id_index}")
                 self.labels.append(labels)
                 self.bboxs.append(bboxs)
-                self.ids.append(ls)
+                if not self.CMU_data:
+                  self.ids.append(ls)
+                else:
+                  self.ids.append(self.base_dir / ls.split(",")[0])
                 self.ids_index.append(id_index)
 
                 self.resizer = albu.Compose([albu.SmallestMaxSize(target_size, p=1.),
