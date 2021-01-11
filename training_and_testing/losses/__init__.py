@@ -36,4 +36,6 @@ class Criterion(nn.Module):
             return angles_loss + 1 * rank_loss + 0.1 * class_loss
         
         elif self.loss_type == "MSE":
-            return self.criterion(preds[0],labels[0]) + self.criterion(preds[1],labels[1])
+            # print("Pred: ",preds[0].shape)
+            # print("Label: ",labels[0].shape)
+            return self.criterion(preds[0],labels[0])

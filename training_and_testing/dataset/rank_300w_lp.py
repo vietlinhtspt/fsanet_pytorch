@@ -2,6 +2,7 @@
 import os
 import torch
 import numpy as np
+import tqdm
 from PIL import Image
 from pathlib import Path
 import albumentations as albu
@@ -32,7 +33,8 @@ class Rank300WLPDataset(Dataset):
         self.ids_index = []
 
         with open(self.base_dir/filename) as f:
-            for i, line in enumerate(f.readlines()):
+            print("[INFO] Loading data.")
+            for i, line in enumerate(tqdm.tqdm(f.readlines()[:100])):
                 ls = line.strip()
 
                 id_index = []
@@ -40,7 +42,7 @@ class Rank300WLPDataset(Dataset):
                 labels = []
 
                 for j in range(100):
-                    img_path = self.base_dir / (ls + '_%d.jpg' % j)
+                    img_path = self.base_dir / (ls + '_%d.jpg' % j) if self.paired_img else self.base_dir / (ls)
                     if not os.path.exists(img_path):
                         # if self.debug:
                         #     print(f"[DEBUG] Path not exits: {img_path}")
@@ -55,6 +57,9 @@ class Rank300WLPDataset(Dataset):
                     id_index.append(j)
                     bboxs.append(bbox)
                     labels.append(np.array(pose))
+
+                    if not self.paired_img:
+                        break
 
                 # if self.debug:
                 #     print(f"[DEBUG] id_index: {id_index}")
@@ -74,9 +79,11 @@ class Rank300WLPDataset(Dataset):
         # print(f"[INFO] Getting index: {index}")
         # if self.debug:
         #     print(f"[INFO] self.ids_index[index]={self.ids_index}")
-        idxs = np.random.choice(self.ids_index[index], size=2, replace=False)
+        # print(self.ids[index])
+        # print(self.bboxs[index])
+        # print(self.labels[index])
 
-        img_path1 = self.base_dir / (self.ids[index]+'_%d.jpg' % idxs[0])
+        img_path1 = self.base_dir / (self.ids[index])
         
 
         # print(f"[INFO] Path one: {img_path1}")
@@ -84,12 +91,12 @@ class Rank300WLPDataset(Dataset):
 
         # scale = np.random.random_sample() * 0.2 + 0.1
         scale = np.random.random_sample() * 0.2 + 1.4
-        bbox1 = change_bbox(self.bboxs[index][idxs[0]], scale=scale, use_forehead=False)
+        bbox1 = change_bbox(self.bboxs[index][0], scale=scale, use_forehead=False)
         
         img1 = np.array(Image.open(img_path1).crop(bbox1))
 
-        lbl1 = self.labels[index][idxs[0]]
-
+        lbl1 = self.labels[index][0]
+        # print(f"[INFO] Label: {lbl1}")
 
         # ImageAugment (RandomBrightness, AddNoise...)
         if self.image_augmenter:
@@ -112,8 +119,10 @@ class Rank300WLPDataset(Dataset):
             img1 = preprocess(img1)
             img1 = torch.FloatTensor(img1).permute(2, 0, 1)
             lbl1 = torch.FloatTensor(lbl1)
+
+            # print(f"[INFO] Label: {lbl1.shape}")
             
-            return img1, lbl1
+            return img1, lbl1, img1, lbl1, lbl1
 
     def get_two_imgs(self, index):
         index = index % len(self.ids)

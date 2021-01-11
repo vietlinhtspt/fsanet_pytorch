@@ -151,7 +151,7 @@ def main():
                     optimizer.step()
                 
                 elif loss_type == "MSE":
-                    img1, img2, lbl1, lbl2, labels = batched
+                    img1, lbl1, _ , _, _ = batched
                     img1, lbl1 = img1.to(device),lbl1.to(device)
 
                     preds1 = model(img1)
