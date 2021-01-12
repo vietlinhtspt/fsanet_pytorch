@@ -15,11 +15,11 @@ Data: # ["BIWI", "AFLW2000", "300WLP"]
   # target_size: 224
   # "FSANET"
   target_size: 64
-  num_worker: 4
+  num_worker: 8
 
 Train:
   num_epoch: 90
-  batch_size: 32
+  batch_size: 128
   val_every: 1
   resume: False
   pretrained_path: ""
