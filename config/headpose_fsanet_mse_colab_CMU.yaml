@@ -15,14 +15,16 @@ Data: # ["BIWI", "AFLW2000", "300WLP"]
   # target_size: 224
   # "FSANET"
   target_size: 64
-  num_worker: 4
+  num_worker: 8
 
 Train:
   num_epoch: 90
-  batch_size: 64
+  batch_size: 128
+  val_every: 1
   val_every: 1
   resume: False
-  pretrained_path:
+  pretrained_path: ""
+  saved_dir: "/content/drive/MyDrive/Colab Notebooks/FSANet"
   loss_type: "MSE" # ["RANK", "MSE"]
   optimizer:
     mode: "adam"
