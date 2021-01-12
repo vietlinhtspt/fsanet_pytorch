@@ -56,6 +56,7 @@ def main():
     val_every = train_config["val_every"]
     resume = train_config["val_every"]
     pretrained_path = train_config["pretrained_path"]
+    epoch_start = 0
     loss_type = train_config["loss_type"]
     optimizer_config = train_config["optimizer"]
 
@@ -112,9 +113,17 @@ def main():
     if torch.cuda.is_available():
         model = nn.DataParallel(model)
 
-    loss_history = []
+    if resume:
+        checkpoint = torch.load(pretrained_path)
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        epoch_start = checkpoint['epoch'] + 1
+        loss_history = checkpoint['loss_history']
+    else:
+        loss_history = []
+
     model.train()
-    for i_epoch in range(0, num_epoch):
+    for i_epoch in range(epoch_start, num_epoch):
         print(f"Epoch: {i_epoch}")
         print(f'Learning rate: {optimizer.param_groups[0]["lr"]}')
         train_losses = []
