@@ -56,6 +56,7 @@ def main():
     val_every = train_config["val_every"]
     resume = train_config["val_every"]
     pretrained_path = train_config["pretrained_path"]
+    saved_dir = train_config["saved_dir"]
     epoch_start = 0
     loss_type = train_config["loss_type"]
     optimizer_config = train_config["optimizer"]
@@ -73,9 +74,9 @@ def main():
     #     model.cuda()
 
     modelname = config_path.stem
-    output_dir = Path('/media/2tb/output_models') / modelname
+    output_dir = Path(saved_dir) / "models" / modelname
     output_dir.mkdir(parents=True ,exist_ok=True)
-    log_dir = Path('../logs') / modelname
+    log_dir = Path(saved_dir) / "logs" / modelname
     log_dir.mkdir(parents=True , exist_ok=True)
 
     # logger = debug_logger(log_dir)

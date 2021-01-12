@@ -22,7 +22,8 @@ Train:
   batch_size: 32
   val_every: 1
   resume: False
-  pretrained_path:
+  pretrained_path: ""
+  saved_dir: "/content/drive/MyDrive/Colab Notebooks/FSANet"
   loss_type: "MSE" # ["RANK", "MSE"]
   optimizer:
     mode: "adam"
