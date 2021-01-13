@@ -54,7 +54,7 @@ def main():
     num_epoch = train_config["num_epoch"]
     batch_size = train_config["batch_size"]
     val_every = train_config["val_every"]
-    resume = train_config["val_every"]
+    resume = train_config["resume"]
     pretrained_path = train_config["pretrained_path"]
     saved_dir = train_config["saved_dir"]
     epoch_start = 0
