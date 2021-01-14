@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=0 python3 train.py ../config/headpose_fsa_mse_HDF5.yaml

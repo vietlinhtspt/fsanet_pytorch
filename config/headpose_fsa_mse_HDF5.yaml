@@ -3,9 +3,9 @@ Net: # ["FSANET", "ResNet"]
   n_class: "3"
 
 Data: # ["BIWI", "AFLW2000", "300WLP"]
-  train_dir: "/home/linhnv/projects/RankPose/data"
-  train_name: "300w_lp_filename.txt"
-  train_type: "300W_LP"
+  train_dir: "/media/2tb/projects/VL's/FSANet"
+  train_name: "300W_LP_dataset_122450.hdf5"
+  train_type: "300W_LP_HDF5"
 
   val_dir: "/home/linhnv/projects/RankPose/data"
   val_name: "aflw2000_filename.txt"

@@ -6,6 +6,7 @@ import tqdm
 from PIL import Image
 from pathlib import Path
 import albumentations as albu
+import pickle
 from torch.utils.data import Dataset
 
 import sys
@@ -95,6 +96,11 @@ class Rank300WLPDataset(Dataset):
 
                 self.resizer = albu.Compose([albu.SmallestMaxSize(target_size, p=1.),
                                         albu.CenterCrop(target_size, target_size, p=1.)])
+        
+        # Export to pickle file
+        if True:
+            with open('cache_rank_300w_lp.pickle', 'wb') as handle:
+                pickle.dump([self.ids, self.bboxs, self.labels], handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     def __len__(self):
         return len(self.ids) * 5
@@ -148,6 +154,7 @@ class Rank300WLPDataset(Dataset):
         else:
             img1 = preprocess(img1)
             img1 = torch.FloatTensor(img1).permute(2, 0, 1)
+            # print(type(lbl1))
             lbl1 = torch.FloatTensor(lbl1)
 
             # print(f"[INFO] Label: {lbl1.shape}")
