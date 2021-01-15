@@ -3,11 +3,11 @@ Net: # ["FSANET", "ResNet"]
   n_class: "3"
 
 Data: # ["BIWI", "AFLW2000", "300WLP"]
-  train_dir: "/media/2tb/projects/VL's/FSANet"
+  train_dir: "/content/fsanet_pytorch/data"
   train_name: "300W_LP_dataset_122450_64x64.hdf5"
   train_type: "300W_LP_HDF5"
 
-  val_dir: "/home/linhnv/projects/RankPose/data"
+  val_dir: "/content/fsanet_pytorch/data"
   val_name: "aflw2000_filename.txt"
   val_type: "AFLW2000"
 
@@ -19,15 +19,15 @@ Data: # ["BIWI", "AFLW2000", "300WLP"]
 
 Train:
   num_epoch: 90
-  batch_size: 32
+  batch_size: 64
   val_every: 5
-  resume: False
-  pretrained_path: ""
-  saved_dir: "/media/2tb/projects/VL's/FSANet"
+  resume: True
+  pretrained_path: "/content/drive/MyDrive/Colab Notebooks/FSANet/models/headpose_fsanet_mse_colab/checkpoint_epoch_40_5.494957804679871.pth"
+  saved_dir: "/content/drive/MyDrive/Colab Notebooks/FSANet"
   loss_type: "MSE" # ["RANK", "MSE"]
   optimizer:
     mode: "adam"
-    base_lr: 0.001
+    base_lr: 0.0001
     t_max: 10
 
 Evaluate:
