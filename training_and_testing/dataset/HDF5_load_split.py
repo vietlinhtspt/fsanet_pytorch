@@ -41,7 +41,7 @@ class HDF5_Dataset(Dataset):
         self.size_dbs = [len(db["labels"].shape[0]) for db in self.dbs]
         self.numImages = sum(self.size_dbs)
 
-    def load_dbs(dir, filename):
+    def load_dbs(self, dir, filename):
         file_paths = glob.glob(dir)
         file_names = [os.path.basename(file_path) for file_path in file_paths]
         db_names = [file_name for file_name in file_names if file_name.startswith(filename)]
