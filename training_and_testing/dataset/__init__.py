@@ -2,6 +2,7 @@ from .biwi import BIWIDataset
 from .aflw2000 import AFLW2000Dataset
 from .rank_300w_lp import Rank300WLPDataset
 from .HDF5_300w_lp import Rank300WLP_HDF5_Dataset
+from .HDF5_load_split import HDF5_Dataset
 
 def load_dataset(data_type="300WLP", **kwargs):
     if data_type == "BIWI":
@@ -12,5 +13,7 @@ def load_dataset(data_type="300WLP", **kwargs):
         return Rank300WLPDataset(**kwargs)
     elif data_type == "300W_LP_HDF5":
         return Rank300WLP_HDF5_Dataset(**kwargs)
+    elif data_type == "HDF5_multi":
+        return HDF5_Dataset(**kwargs)
     else:
         raise NotImplementedError

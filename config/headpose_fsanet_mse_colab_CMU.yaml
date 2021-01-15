@@ -4,8 +4,8 @@ Net: # ["FSANET", "ResNet"]
 
 Data: # ["BIWI", "AFLW2000", "300WLP"]
   train_dir: "/content/fsanet_pytorch/data"
-  train_name: "CMU_data_1687555_jpgs.txt"
-  train_type: "300W_LP"
+  train_name: "CMU_dataset_64x64"
+  train_type: "HDF5_multi"
 
   val_dir: "/content/fsanet_pytorch/data"
   val_name: "aflw2000_filename.txt"
