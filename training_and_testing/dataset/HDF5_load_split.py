@@ -17,7 +17,7 @@ sys.path.append("..")
 from utils.preprocess import preprocess, change_bbox
 from utils.functional import get_pt_ypr_from_mat
 
-class Rank300WLP_HDF5_Dataset(Dataset):
+class HDF5_Dataset(Dataset):
     def __init__(self, base_dir=None, filename=None, n_class=3, target_size=224, 
         affine_augmenter=None, image_augmenter=None, debug=False, paired_img=False):
 
