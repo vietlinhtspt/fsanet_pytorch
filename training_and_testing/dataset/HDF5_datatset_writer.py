@@ -29,7 +29,9 @@ class HDF5DatasetWriter:
         self.labels = self.db.create_dataset("labels", (dims[0], 3), dtype="float")
         self.size_data = (dims[1], dims[2], dims[3])
 
-        # self.resizer = albu.Compose([albu.SmallestMaxSize(target_size, p=1.), albu.CenterCrop(target_size, target_size, p=1.)])
+        target_size = max(dims[1], dims[2])
+
+        self.resizer = albu.Compose([albu.SmallestMaxSize(target_size, p=1.), albu.CenterCrop(target_size, target_size, p=1.)])
         # store the buffer size, then initialize the buffer itself
         # along with the index into the datasets
         self.bufSize = bufSize
@@ -38,6 +40,9 @@ class HDF5DatasetWriter:
 
     def add(self, rows, label):
         # add the rows and labels to the buffer
+
+        resized = self.resizer(image=rows)
+        rows = resized['image']
         
         padded_data = np.zeros(self.size_data)
         padded_data[:rows.shape[0],:rows.shape[1]] = rows
@@ -84,13 +89,13 @@ if __name__ == "__main__":
         labels = pickle_data[2]
         bboxs = pickle_data[1]
 
-    path_save_HDF5_file = f"/media/2tb/projects/VL's/FSANet/300W_LP_dataset_{len(img_paths)}.hdf5"
+    path_save_HDF5_file = f"/media/2tb/projects/VL's/FSANet/300W_LP_dataset_{len(img_paths)}_64x64.hdf5"
     
     # img_shapes = []
 
     os.system(f"rm -rf {path_save_HDF5_file}")
 
-    writer = HDF5DatasetWriter((len(img_paths), 450, 450, 3), path_save_HDF5_file)
+    writer = HDF5DatasetWriter((len(img_paths), 64, 64, 3), path_save_HDF5_file)
 
     for id, path_img in enumerate(tqdm.tqdm(img_paths[:])):
         # print(path_img)

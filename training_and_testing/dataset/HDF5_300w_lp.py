@@ -54,9 +54,9 @@ class Rank300WLP_HDF5_Dataset(Dataset):
             image = augmented['image']
 
         # Resize (Scale & Pad & Crop)
-        if self.resizer:
-            resized = self.resizer(image=image)
-            image = resized['image']
+        # if self.resizer:
+        #     resized = self.resizer(image=image)
+        #     image = resized['image']
         # AffineAugment (Horizontal Flip, Rotate...)
         if self.affine_augmenter:
             augmented = self.affine_augmenter(image=image)
