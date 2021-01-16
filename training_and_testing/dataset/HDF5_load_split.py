@@ -38,14 +38,17 @@ class HDF5_Dataset(Dataset):
         # CMU_dataset_64x64
 
         self.dbs = self.load_dbs(base_dir, filename)
-        self.size_dbs = [len(db["labels"].shape[0]) for db in self.dbs]
+        # print(self.dbs[0]["labels"].shape[0])
+        self.size_dbs = [db["labels"].shape[0] for db in self.dbs]
         self.numImages = sum(self.size_dbs)
 
     def load_dbs(self, dir, filename):
-        file_paths = glob.glob(dir)
+        file_paths = glob.glob(dir + "/*")
         file_names = [os.path.basename(file_path) for file_path in file_paths]
+        # print(f"[INFO] File names :{file_names}")
         db_names = [file_name for file_name in file_names if file_name.startswith(filename)]
         db_names = sorted(db_names, key=lambda x: x.split("_")[-1], reverse=False)
+        # print(f"[INFO] DB name: {db_names}")
         dbs = [h5py.File(os.path.join(dir, db_name)) for db_name in db_names]
         return dbs
 
