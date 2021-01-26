@@ -17,7 +17,9 @@ class Criterion(nn.Module):
             # self.criterion = Wingloss()
             self.criterion = nn.MSELoss(**kwargs)
             self.rank_criterion = nn.MarginRankingLoss(margin=0., **kwargs)
-            # self.rank_criterion = RankingL2loss(margin=0., **kwargs)
+            # self.rank_criterion = RankingL2loss(margin=0., **kwargs
+        elif loss_type == "wrapped":
+            print("[INFO] Use wrapped loss.")
         else:
             raise NotImplementedError
 
