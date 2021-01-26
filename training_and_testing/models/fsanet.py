@@ -468,7 +468,11 @@ class SSRLayerCMU(nn.Module):
         #here, k = 3
         c = c / (bins * (1 + s1_params[2])) / (bins * (1 + s2_params[2])) / (bins * (1 + s3_params[2]))
 
+        print((a + b + c).size())
+        print(V_tensor.size())
+
         pred = (a + b + c) * V_tensor
+
         
         return pred
 
