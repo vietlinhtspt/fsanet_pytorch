@@ -19,7 +19,9 @@ class Criterion(nn.Module):
             self.rank_criterion = nn.MarginRankingLoss(margin=0., **kwargs)
             # self.rank_criterion = RankingL2loss(margin=0., **kwargs
         elif loss_type == "wrapped":
+            print("------------------------")
             print("[INFO] Use wrapped loss.")
+            print("------------------------")
         else:
             raise NotImplementedError
 
@@ -49,4 +51,8 @@ class Criterion(nn.Module):
             loss_1 = (preds - labels)**2
             loss_2 = (360 - (preds - labels))**2
             loss = torch.min(loss_1, loss_2)
+            print("------------------------")
+            print(loss)
+            print(loss.size())
+            print("------------------------")
             return loss
