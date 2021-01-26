@@ -444,8 +444,8 @@ class SSRLayerCMU(nn.Module):
 
         V_tensor = torch.tensor([V_yaw, V, V])
 
-        if torch.cuda.is_available():
-            V_tensor.cuda()
+        # if torch.cuda.is_available():
+        #     V_tensor.cuda()
 
         #Stage 1 loop over all bins
         for i in range(bins):
