@@ -51,7 +51,7 @@ class Criterion(nn.Module):
             preds = preds[0]
             labels = labels[0]
             loss_1 = (preds - labels)**2
-            loss_2 = (360 - (preds - labels))**2
+            loss_2 = (360 - torch.abs(preds - labels))**2
             loss = torch.min(loss_1, loss_2)
             # print("------------------------")
             # print(loss)
