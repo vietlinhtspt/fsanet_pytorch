@@ -56,9 +56,10 @@ class HDF5_Dataset(Dataset):
     def load_all_hdf5(self, dir):
         file_paths = glob.glob(dir + "/*")
         file_names = [os.path.basename(file_path) for file_path in file_paths]
-        print(f"[INFO] Load training data from {file_names}")
 
         db_names = [file_name for file_name in file_names if file_name.endswith(".hdf5")]
+        print(f"[INFO] Load training data from {db_names}")
+
         # print(f"[INFO] DB name: {db_names}")
         dbs = [h5py.File(os.path.join(dir, db_name)) for db_name in db_names]
         return dbs
