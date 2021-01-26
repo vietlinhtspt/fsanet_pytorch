@@ -426,7 +426,7 @@ class SSRLayer(nn.Module):
 class SSRLayerCMU(nn.Module):
     def __init__(self, bins):
         #this ssr layer implements MD 3-stage SSR
-        super(SSRLayer, self).__init__()
+        super(SSRLayerCMU, self).__init__()
         self.bins_per_stage = bins
 
     #x is list of ssr params for each stage
