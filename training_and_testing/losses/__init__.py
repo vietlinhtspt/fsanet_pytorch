@@ -39,3 +39,12 @@ class Criterion(nn.Module):
             # print("Pred: ",preds[0].shape)
             # print("Label: ",labels[0].shape)
             return self.criterion(preds[0],labels[0])
+
+        elif self.loss_type == "wrapped":
+            """
+            loss for (yaw, pitch, toll)
+            """
+            loss_1 = (preds - labels)**2
+            loss_2 = (360 - (preds - labels))**2
+            loss = torch.min(loss_1, loss_2)
+            return loss
