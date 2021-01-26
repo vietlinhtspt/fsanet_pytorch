@@ -166,6 +166,7 @@ class ScoringFunction(nn.Module):
         if(var):
             self.reduce_channel = VarianceC()
         else:
+            #                                   64
             self.reduce_channel = Conv2dAct(in_channels,1,1,'sigmoid')
 
         # self.fc = nn.Linear(8*8,mdim*(8*8*3))
@@ -180,37 +181,39 @@ class ScoringFunction(nn.Module):
 
 
 class FineGrainedStructureMapping(nn.Module):
+    #                      64          21        5    
     def __init__(self,in_channels,num_primcaps,mdim,var=False):
         super(FineGrainedStructureMapping, self).__init__()
 
         self.n = 8*8*3
-        self.n_new = int(num_primcaps/3) # this is n' in paper
-        self.m = mdim
+        self.n_new = int(num_primcaps/3) # this is n' in paper = 7
+        self.m = mdim  # 5
 
         self.attention_maps = ScoringFunction(in_channels,var)
-
-        self.fm = nn.Linear(self.n//3,self.n*self.m) #this is used for calculating Mk in paper
-
+        #                       64       64*3*5
+        self.fm = nn.Linear(self.n//3,self.n*self.m) #this is used for calculating Mk in paper 
+        #                    64*3       7*5
         self.fc = nn.Linear(self.n,self.n_new*self.m) #this is used for calculating C in paper
 
     #input is list of stage outputs in batches
     def forward(self,x):
+        # [U1,U2,U3] where U1=U2=U3 has shape [batch,64,8,8]
         U1,U2,U3 = x
         #Attention Maps (Ak)
-        A1 = self.attention_maps(U1)
-        A2 = self.attention_maps(U2)
-        A3 = self.attention_maps(U3)
+        A1 = self.attention_maps(U1)  # Output shape: [batch, 64]
+        A2 = self.attention_maps(U2)  # Output shape: [batch, 64]
+        A3 = self.attention_maps(U3)  # Output shape: [batch, 64]
 
         #Attention Maps Concatenation
-        A = torch.cat((A1,A2,A3),dim=1)
+        A = torch.cat((A1,A2,A3),dim=1) # Output shape: [batch, 64*3]
 
         #C Matrix
-        C = torch.sigmoid(self.fc(A))
-        C = C.view(C.size(0),self.n_new,self.m)
+        C = torch.sigmoid(self.fc(A)) # Output shape: [batch, 7*5]
+        C = C.view(C.size(0),self.n_new,self.m) # Output shape: [batch, 7, 5]
 
         #Mk Matrices
-        M1 = torch.sigmoid(self.fm(A1))
-        M1 = M1.view(M1.size(0),self.m,self.n)
+        M1 = torch.sigmoid(self.fm(A1)) # Output shape: [batch, 64*3*5]
+        M1 = M1.view(M1.size(0),self.m,self.n) # Output shape: [batch, 5, 64*3]
 
         M2 = torch.sigmoid(self.fm(A2))
         M2 = M2.view(M2.size(0),self.m,self.n)
@@ -420,6 +423,52 @@ class SSRLayer(nn.Module):
 
         return pred
 
+class SSRLayerCMU(nn.Module):
+    def __init__(self, bins):
+        #this ssr layer implements MD 3-stage SSR
+        super(SSRLayer, self).__init__()
+        self.bins_per_stage = bins
+
+    #x is list of ssr params for each stage
+    def forward(self,x):
+        s1_params,s2_params,s3_params = x
+
+        a = b = c = 0
+
+        bins = self.bins_per_stage
+
+        doffset = bins//2
+
+        V = 90 #max bin width
+        V_yaw = 180
+
+        #Stage 1 loop over all bins
+        for i in range(bins):
+            a = a + (i - doffset + s1_params[1]) * s1_params[0][:,:,i]
+        #this is unfolded multiplication loop of SSR equation in paper
+        #here, k = 1
+        a = a / (bins * (1 + s1_params[2]))
+
+        #Stage 2 loop over all bins
+        for i in range(bins):
+            b = b + (i - doffset + s2_params[1]) * s2_params[0][:,:,i]
+        #this is unfolded multiplication loop of SSR equation in paper
+        #here, k = 2
+        b = b / (bins * (1 + s1_params[2])) / (bins * (1 + s2_params[2]))
+
+        #Stage 3 loop over all bins
+        for i in range(bins):
+            c = c + (i - doffset + s3_params[1]) * s3_params[0][:,:,i]
+        #this is unfolded multiplication loop of SSR equation in paper
+        #here, k = 3
+        c = c / (bins * (1 + s1_params[2])) / (bins * (1 + s2_params[2])) / (bins * (1 + s3_params[2]))
+
+        pred = (a + b + c)
+        pred = pred[1:] * V      # pitch, roll
+        pred = pred[0] * V_yaw   # yaw
+
+        return pred
+
 class FSANet(nn.Module):
     def __init__(self,var=False):
         super(FSANet, self).__init__()
@@ -437,7 +486,8 @@ class FSANet(nn.Module):
         self.esp_s1 = ExtractSSRParams(3,3)
         self.esp_s2 = ExtractSSRParams(3,3)
         self.esp_s3 = ExtractSSRParams(3,3)
-        self.ssr = SSRLayer(3)
+        # self.ssr = SSRLayer(3)
+        self.ssr = SSRLayerCMU(3)
 
     #x is batch of input rgb images
     def forward(self,x):
