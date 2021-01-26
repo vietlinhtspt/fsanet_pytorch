@@ -444,8 +444,8 @@ class SSRLayerCMU(nn.Module):
 
         V_tensor = torch.tensor([V_yaw, V, V])
 
-        # if torch.cuda.is_available():
-        #     V_tensor.cuda()
+        if torch.cuda.is_available():
+            V_tensor = V_tensor.cuda()
 
         #Stage 1 loop over all bins
         for i in range(bins):
@@ -467,9 +467,6 @@ class SSRLayerCMU(nn.Module):
         #this is unfolded multiplication loop of SSR equation in paper
         #here, k = 3
         c = c / (bins * (1 + s1_params[2])) / (bins * (1 + s2_params[2])) / (bins * (1 + s3_params[2]))
-
-        print((a + b + c).size())
-        print(V_tensor.size())
 
         pred = (a + b + c) * V_tensor
 
