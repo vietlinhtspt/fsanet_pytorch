@@ -439,8 +439,13 @@ class SSRLayerCMU(nn.Module):
 
         doffset = bins//2
 
-        V = 90 #max bin width
+        V = 99 #max bin width
         V_yaw = 180
+
+        V_tensor = torch.tensor([V_yaw, V, V])
+
+        if torch.cuda.is_available():
+            V_tensor.cuda()
 
         #Stage 1 loop over all bins
         for i in range(bins):
@@ -463,10 +468,8 @@ class SSRLayerCMU(nn.Module):
         #here, k = 3
         c = c / (bins * (1 + s1_params[2])) / (bins * (1 + s2_params[2])) / (bins * (1 + s3_params[2]))
 
-        pred = (a + b + c)
-        pred = pred[1:] * V      # pitch, roll
-        pred = pred[0] * V_yaw   # yaw
-
+        pred = (a + b + c) * V_tensor
+        
         return pred
 
 class FSANet(nn.Module):
