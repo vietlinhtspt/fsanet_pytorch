@@ -1,0 +1,38 @@
+Net: # ["FSANET", "ResNet"]
+  net_type: "FSANET" 
+  n_class: "3"
+
+Data: # ["BIWI", "AFLW2000", "300WLP"]
+  train_dir: "/content/fsanet_pytorch/data"
+  train_name: "CMU_dataset_64x64"
+  train_type: "HDF5_multi"
+
+  val_dir: "/content/fsanet_pytorch/data"
+  val_name: "aflw2000_filename.txt"
+  val_type: "AFLW2000"
+
+  # # "ResNet"
+  # target_size: 224
+  # "FSANET"
+  target_size: 64
+  num_worker: 1
+
+Train:
+  num_epoch: 30
+  batch_size: 128
+  val_every: 1
+  val_every: 1
+  resume: False
+  pretrained_path: ""
+  saved_dir: "/content/drive/MyDrive/Colab Notebooks/FSANet"
+  loss_type: "wrapped" # ["RANK", "MSE"]
+  optimizer:
+    mode: "adam"
+    base_lr: 0.001
+    t_max: 10
+
+Evaluate:
+  eval_dir: "/content/fsanet_pytorch/data"
+  eval_name: "biwi_dataset_list.txt"
+  eval_type: "BIWI"
+
