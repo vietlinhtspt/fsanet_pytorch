@@ -51,8 +51,10 @@ class Criterion(nn.Module):
             loss_1 = (preds - labels)**2
             loss_2 = (360 - (preds - labels))**2
             loss = torch.min(loss_1, loss_2)
-            print("------------------------")
-            print(loss)
-            print(loss.size())
-            print("------------------------")
+            # print("------------------------")
+            # print(loss)
+            # print(loss.size())
+            # print("------------------------")
+            loss = torch.sum(loss, dim=1)
+            loss = torch.mean(loss)
             return loss
