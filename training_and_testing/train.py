@@ -160,7 +160,7 @@ def main():
                     loss.backward()
                     optimizer.step()
                 
-                elif loss_type == "MSE":
+                elif loss_type == "MSE" or loss_type == "wrapped":
                     img1, lbl1, _ , _, _ = batched
                     img1, lbl1 = img1.to(device),lbl1.to(device)
 
