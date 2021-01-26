@@ -42,6 +42,7 @@ class HDF5_Dataset(Dataset):
         # print(self.dbs[0]["labels"].shape[0])
         self.size_dbs = [db["labels"].shape[0] for db in self.dbs]
         self.numImages = sum(self.size_dbs)
+        print(f"[INFO] Size dbs {self.numImages}")
 
     def load_dbs(self, dir, filename):
         file_paths = glob.glob(dir + "/*")
