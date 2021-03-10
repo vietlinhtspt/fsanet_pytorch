@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 from PIL import Image
 from torchvision import transforms
+from utils.preprocess import preprocess
 import tqdm
 import cv2
 from math import cos, sin
@@ -180,9 +181,11 @@ def visualize(model, dir_imgs, label_box_imgs, save_imgs_path=None, save_video_p
             # cv2.imwrite("cropped_frame.jpg", cropped_frame) 
             # Scale down and crop to target size
             cropped_frame = resizer(image=cropped_frame)
-            # Convert to tensor
-            cropped_frame = Image.fromarray(cropped_frame['image'])
-            cropped_frame = transforms.ToTensor()(cropped_frame).unsqueeze_(0)
+           
+            cropped_frame = preprocess(np.array(cropped_frame['image']))
+            # print(cropped_frame)
+            # Convert to tensor and transform to [-1, 1]
+            cropped_frame = torch.FloatTensor(cropped_frame).permute(2, 0, 1).unsqueeze_(0)
             device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") 
             cropped_frame.to(device)
             # print(cropped_frame.size())
