@@ -180,6 +180,8 @@ def visualize(model, dir_imgs, label_box_imgs, save_imgs_path=None, save_video_p
             
             # cv2.imwrite("cropped_frame.jpg", cropped_frame) 
             # Scale down and crop to target size
+            if cropped_frame.shape[0] == 0 or cropped_frame.shape[1] == 0:
+                continue
             cropped_frame = resizer(image=cropped_frame)
            
             cropped_frame = preprocess(np.array(cropped_frame['image']))
@@ -250,13 +252,13 @@ def generate_video(imgs_path, saved_video_path):
 if __name__ == "__main__":
     dir_imgs = "/media/2tb/projects/VL's/headpose_data/CCTV_Shophouse/raw_frames"
     label_box_imgs = "/media/2tb/projects/VL's/headpose_data/CCTV_Shophouse/labeled_faces"
-    model_path = "/media/2tb/projects/VL's/FSANet/models/fsanet_Wrapped_HDF5_CMU_300WLP/model_epoch_89_11.195596277713776.pth"
+    model_path = "/media/2tb/projects/VL's/FSANet/models/fsanet_MSE_HDF5_CMU_300WLP/model_epoch_88_10.852409601211548.pth"
     config_model_path = "/home/linhnv/projects/fsanet_pytorch/config/fsanet_wrapped_colab_CMU.yaml"
 
     save_dir = "/media/2tb/projects/VL's/headpose_data/CCTV_Shophouse"
 
     # data_name = os.path.basename(dir_imgs)
-    data_name = "CCTV_Shophouse_fsanet_wrapped"
+    data_name = "CCTV_Shophouse_fsanet_MSE"
     save_path = os.path.join(save_dir, data_name)
     
     save_imgs_path = os.path.join(save_path, "processed_imgs")
