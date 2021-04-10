@@ -36,7 +36,7 @@ def main():
     data_config = config['Data']
     train_config = config['Train']
 
-    
+
 
     # Config for data:
     train_dir = data_config["train_dir"]
@@ -101,6 +101,7 @@ def main():
                                         ], p=0.5),
                                     albu.HueSaturationValue(hue_shift_limit=20, sat_shift_limit=30, val_shift_limit=20,p=0.2),
                                     albu.RGBShift(p=0.2),
+                                    albu.RandomSizedCrop(min_max_height=[45, 64],height=64, width=64, p=0.5),
                                     ])
 
     train_dataset = load_dataset(data_type=train_type, base_dir=train_dir, filename=train_name, n_class=net_config['n_class'], 
@@ -164,6 +165,9 @@ def main():
                     img1, lbl1, _ , _, _ = batched
                     img1, lbl1 = img1.to(device),lbl1.to(device)
 
+                    if net_config["net_type"] == "Perceiver":
+                        img1 = img1.permute(0, 2, 3, 1)
+
                     preds1 = model(img1)
 
                     loss = loss_fn([preds1,[]], [lbl1,[]]) 
@@ -194,6 +198,9 @@ def main():
                     for batched in _tqdm:
                         
                         images, labels = batched
+
+                        if net_config["net_type"] == "Perceiver":
+                            images = images.permute(0, 2, 3, 1)
                     
                         images, labels = images.to(device), labels.to(device)
 

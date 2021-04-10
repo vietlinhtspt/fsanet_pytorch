@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=1 python3 train.py ../config/perceiver_MSE_HDF5__300WLP_4_5_2_64_128.yaml
