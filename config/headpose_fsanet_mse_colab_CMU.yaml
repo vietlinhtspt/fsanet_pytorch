@@ -1,5 +1,6 @@
 Net: # ["FSANET", "ResNet"]
   net_type: "FSANET" 
+  type_model: "uni" # ["uni", "var", "weight"] just be used in FSANet
   n_class: "3"
 
 Data: # ["BIWI", "AFLW2000", "300WLP"]
@@ -15,7 +16,7 @@ Data: # ["BIWI", "AFLW2000", "300WLP"]
   # target_size: 224
   # "FSANET"
   target_size: 64
-  num_worker: 8
+  num_worker: 1
 
 Train:
   num_epoch: 90
