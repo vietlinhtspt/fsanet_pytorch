@@ -158,12 +158,30 @@ class VarianceC(nn.Module):
 
         return x
 
+class Uniform(nn.Module):
+    def __init__(self):
+        super(Uniform, self).__init__()
+
+    def forward(self,x):
+        # we could just use torch.var here:
+        # x = torch.var(x,dim=1,keepdim=True,unbiased=False)
+        # but since ONNX does not support var operator,
+        # we are computing variance manually
+        mean_x = torch.mean(x,dim=1,keepdim=True)
+        sub_x = x.sub(mean_x)
+        x = torch.mean(torch.mul(sub_x,sub_x),dim=1,keepdim=True)
+        x = torch.ones_like(x)
+        return x
 
 class ScoringFunction(nn.Module):
-    def __init__(self,in_channels,var=False):
+    def __init__(self,in_channels, type_model="weight"):
         super(ScoringFunction, self).__init__()
         # self.mdim = mdim
-        if(var):
+        print(type_model)
+        if(type_model=="uni"):
+            print("Load uni")
+            self.reduce_channel = Uniform()
+        if(type_model=="var"):
             self.reduce_channel = VarianceC()
         else:
             #                                   64
@@ -182,14 +200,14 @@ class ScoringFunction(nn.Module):
 
 class FineGrainedStructureMapping(nn.Module):
     #                      64          21        5    
-    def __init__(self,in_channels,num_primcaps,mdim,var=False):
+    def __init__(self,in_channels,num_primcaps,mdim, type_model="weight"):
         super(FineGrainedStructureMapping, self).__init__()
 
         self.n = 8*8*3
         self.n_new = int(num_primcaps/3) # this is n' in paper = 7
         self.m = mdim  # 5
 
-        self.attention_maps = ScoringFunction(in_channels,var)
+        self.attention_maps = ScoringFunction(in_channels,type_model)
         #                       64       64*3*5
         self.fm = nn.Linear(self.n//3,self.n*self.m) #this is used for calculating Mk in paper 
         #                    64*3       7*5
@@ -474,7 +492,7 @@ class SSRLayerCMU(nn.Module):
         return pred
 
 class FSANet(nn.Module):
-    def __init__(self,var=False):
+    def __init__(self,type_model="weight"):
         super(FSANet, self).__init__()
         num_primcaps = 7*3
         primcaps_dim = 64
@@ -484,7 +502,7 @@ class FSANet(nn.Module):
         mdim = 5
 
         self.msms = MultiStreamMultiStage(3) #channels: rgb 
-        self.fgsm = FineGrainedStructureMapping(64,num_primcaps,mdim,var) #channels: feature maps
+        self.fgsm = FineGrainedStructureMapping(64,num_primcaps,mdim,type_model) #channels: feature maps
         self.caps_layer = CapsuleLayer1d(num_primcaps,primcaps_dim,num_out_capsule,out_capsule_dim,routings)
         self.eaf = ExtractAggregatedFeatures(num_out_capsule)
         self.esp_s1 = ExtractSSRParams(3,3)
