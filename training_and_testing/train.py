@@ -109,7 +109,7 @@ def main():
                                 affine_augmenter=affine_augmenter, image_augmenter=image_augmenter, debug=False )
     val_dataset = load_dataset(data_type=val_type, base_dir=val_dir, filename=val_name, n_class=net_config['n_class'], target_size=target_size, debug=False )
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, pin_memory=True, drop_last=True)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True, pin_memory=True, drop_last=True)
     valid_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
 
     if torch.cuda.is_available():
@@ -197,7 +197,7 @@ def main():
                 with tqdm(valid_loader) as _tqdm:
                     for batched in _tqdm:
                         
-                        images, labels = batched
+                        images, labels, _ , _, _ = batched
 
                         if net_config["net_type"] == "Perceiver":
                             images = images.permute(0, 2, 3, 1)

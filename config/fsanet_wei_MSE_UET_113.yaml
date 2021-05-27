@@ -1,0 +1,39 @@
+Net: # ["FSANET", "ResNet"]
+  net_type: "FSANET" 
+  type_model: "weight" # ["uni", "var", "weight"] just be used in FSANet
+  n_class: "3"
+
+Data: # ["BIWI", "AFLW2000", "300WLP"]
+  train_dir: "/media/linhnv/AnhDH/LINHNV/train_1"
+  train_name: "CMU_dataset_64x64"
+  train_type: "HDF5_multi"
+
+  val_dir: "/media/2tb/projects/VL's/UetHeadpose/pre_processed/val_data_2"
+  val_name: "CMU_dataset_64x64"
+  val_type: "HDF5_multi"
+
+  # # "ResNet"
+  # target_size: 224
+  # "FSANET"
+  target_size: 64
+  num_worker: 1
+
+Train:
+  num_epoch: 187
+  batch_size: 128
+  val_every: 1
+  val_every: 1
+  resume: True
+  pretrained_path: "/media/2tb/projects/VL's/FSANet/models/fsanet_wei_MSE_UET_113/checkpoint_epoch_110_12.51703554391861.pth"
+  saved_dir: "/media/2tb/projects/VL's/FSANet"
+  loss_type: "MSE" # ["RANK", "MSE"]
+  optimizer:
+    mode: "adam"
+    base_lr: 0.0001
+    t_max: 10
+
+Evaluate:
+  eval_dir: "/content/fsanet_pytorch/data"
+  eval_name: "biwi_dataset_list.txt"
+  eval_type: "BIWI"
+
