@@ -1,5 +1,8 @@
 
 import os
+from training_and_testing.dataset.draw import draw_axis
+# from draw import draw_axis
+
 import torch
 import numpy as np
 import tqdm
@@ -9,6 +12,7 @@ import albumentations as albu
 import pickle
 import glob
 import h5py
+
 from torch.utils.data import Dataset
 
 import sys
@@ -80,6 +84,7 @@ class HDF5_Dataset(Dataset):
         index, num_db = self.get_true_index(index)
 
         image = self.dbs[num_db]["images"][index]
+        # image = image[:, :, ::-1]
         label = self.dbs[num_db]["labels"][index]
 
         # print(label)
@@ -101,7 +106,7 @@ class HDF5_Dataset(Dataset):
 
         if self.debug:
             # print(label)
-            return image
+            return image, label
         else:
             image = preprocess(image)
             image = torch.FloatTensor(image).permute(2, 0, 1)
@@ -146,22 +151,25 @@ if __name__ == '__main__':
                                     albu.HueSaturationValue(hue_shift_limit=20, sat_shift_limit=30, val_shift_limit=20,p=0.2),
                                     albu.RGBShift(p=0.2),
                                     ])
-    dataset = Rank300WLP_HDF5_Dataset(base_dir="/home/linhnv/projects/RankPose/data", affine_augmenter=affine_augmenter, image_augmenter=image_augmenter,
-                             filename='300w_lp_for_rank.txt', target_size=224, debug=False)
+    base_dir = "/media/2tb/projects/VL's/UetHeadpose/pre_processed/train_data"
+    # base_dir = "/media/2tb/projects/VL's/headpose_data_300WLP"
+    # base_dir = "/media/2tb/projects/VL's/copy_2021_03_06_headpose_data_1"
+    dataset = HDF5_Dataset(base_dir, affine_augmenter=affine_augmenter, image_augmenter=image_augmenter,
+                             filename='300w_lp_for_rank.txt', target_size=64, debug=True)
     # dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
-    dataloader = DataLoader(dataset, batch_size=32, num_workers=4, pin_memory=True, drop_last=True)
+    dataloader = DataLoader(dataset, batch_size=32, num_workers=1, pin_memory=True, drop_last=True)
     print(len(dataset))
 
     dir_path = Path("./train_img")
     dir_path.mkdir(parents=True, exist_ok=True)
 
     # for i, batched in enumerate(dataloader):
-    #     img1, img2,  lbl1, lbl2, label = batched
+    #     images, labels, _ , _, _ = batched
     #     for j in range(8):
     #         img = img1[j].numpy()
     #         img = img.astype('uint8')
     #         img = Image.fromarray(img)
-    #         # img.save(dir_path / f'300W_img1_{i}_{j}.jpg')
+    #         img.save(dir_path / f'300W_img1_{i}_{j}.jpg')
     #         img = img2[j].numpy()
     #         img = img.astype('uint8')
     #         img = Image.fromarray(img)
@@ -169,8 +177,13 @@ if __name__ == '__main__':
     #     if i > 2:
     #         break
 
-    with tqdm(dataloader) as _tqdm:
-        for batched in _tqdm:
-            print(".")
-
-
+    # with tqdm(dataloader) as _tqdm:
+    #     for batched in _tqdm:
+    #         print(".")
+    
+    for i in tqdm(range(dataset.__len__())):
+        img, label = dataset.get_one_img(i)
+        # print(img)
+        img = draw_axis(np.copy(img), label[0], label[1], label[2])
+        
+        Image.fromarray(img).save(dir_path / f'Uet_val_img_{i}.jpg')

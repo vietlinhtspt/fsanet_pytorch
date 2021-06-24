@@ -66,7 +66,13 @@ parser.add_argument('config_path')
 args = parser.parse_args()
 
 if __name__ == "__main__":
-    config_path = Path(args.config_path)
+
+    model_path = "/media/2tb/output_models/headpose_resnet/model_epoch_78_3.985460854345752.pth"
+    config_path = Path()
+
+
+
+    
     config = yaml.load(open(config_path))
     data_config = config['Data']
     net_config = config['Net']
@@ -82,7 +88,7 @@ if __name__ == "__main__":
     if torch.cuda.is_available():
         model = nn.DataParallel(model)
 
-    model_path = "/media/2tb/output_models/headpose_resnet/model_epoch_78_3.985460854345752.pth"
+   
     # model_path = "/media/2tb/output_models/headpose_fsanet/model_epoch_228_5.439456623458148.pth"
     # model_path = "/home/linhnv/projects/fsanet_pytorch/model_train/FSA_MSE/model_epoch_77_5.65551967774668.pth"
     param = torch.load(model_path, map_location='cpu')

@@ -79,7 +79,7 @@ class AFLW2000Dataset(Dataset):
             img = img.transpose(2, 0, 1)
             img = torch.FloatTensor(img)
             label = torch.FloatTensor(label)
-        return img, label
+        return img, label, img, label, label
 
 if __name__ == '__main__':
     import matplotlib

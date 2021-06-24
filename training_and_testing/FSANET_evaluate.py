@@ -46,7 +46,8 @@ def main():
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # pretrained_paths = ["/media/2tb/output_models/headpose_resnet/model_epoch_79_4.179329837522199.pth"] # 4.6
-    pretrained_paths = ["/media/2tb/output_models/headpose_resnet/model_epoch_78_3.985460854345752.pth"] # 4.3
+    # pretrained_paths = ["/media/2tb/output_models/headpose_resnet/model_epoch_78_3.985460854345752.pth"] # 4.3
+    pretrained_paths = ["/home/linhnv/projects/fsanet_pytorch/model_train/FSA_MSE/model_epoch_79_5.914248631846521.pth"]
     # pretrained_paths = ["/media/2tb/output_models/headpose_fsanet/model_epoch_228_5.439456623458148.pth"] # 7.8
 
 
@@ -107,7 +108,7 @@ def main():
                 
                     # loss = loss_fn([preds], [labels])
 
-                    diff = calculate_diff(preds, labels)
+                    diff, dif_yaw, dif_pitch, dif_roll = calculate_diff(preds, labels)
                     
                     _tqdm.set_postfix(OrderedDict(mae=f'{diff:.2f}'))
                     # _tqdm.set_postfix(OrderedDict(loss=f'{loss.item():.3f}', d_y=f'{np.mean(diff[:,0]):.1f}', d_p=f'{np.mean(diff[:,1]):.1f}', d_r=f'{np.mean(diff[:,2]):.1f}'))

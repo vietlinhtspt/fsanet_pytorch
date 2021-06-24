@@ -109,10 +109,10 @@ if __name__ == '__main__':
                                     albu.HueSaturationValue(hue_shift_limit=20, sat_shift_limit=30, val_shift_limit=20,p=0.2),
                                     albu.RGBShift(p=0.2),
                                     ])
-    dataset = Rank300WLP_HDF5_Dataset(base_dir="/home/linhnv/projects/RankPose/data", affine_augmenter=affine_augmenter, image_augmenter=image_augmenter,
-                             filename='300w_lp_for_rank.txt', target_size=224, debug=False)
+    dataset = Rank300WLP_HDF5_Dataset(base_dir="/content/fsanet_pytorch/data", affine_augmenter=affine_augmenter, image_augmenter=image_augmenter,
+                             filename='300W_LP_dataset_122450_64x64.hdf5', target_size=64, debug=False)
     # dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
-    dataloader = DataLoader(dataset, batch_size=32, num_workers=4, pin_memory=True, drop_last=True)
+    dataloader = DataLoader(dataset, batch_size=16, num_workers=2, pin_memory=True, drop_last=True)
     print(len(dataset))
 
     dir_path = Path("./train_img")
@@ -134,6 +134,13 @@ if __name__ == '__main__':
 
     with tqdm(dataloader) as _tqdm:
         for batched in _tqdm:
-            print(".")
+            img1, lbl1,  _, _, _ = batched
+            if math.isnan(torch.sum(img1)) or math.isinf(torch.sum(img1)):
+              print("Img: ", torch.sum(img1))
+            if math.isnan(torch.sum(lbl1)) or math.isinf(torch.sum(lbl1)):
+              print("Label: ", lbl1)
+              break
+            
+
 
 

@@ -7,15 +7,18 @@ import sys
 from pathlib import Path
 from PIL import Image
 from torchvision import transforms
-from utils.preprocess import preprocess
+from utils.preprocess import preprocess, change_bbox
+from utils.functional import get_pt_ypr_from_mat
 import tqdm
 import cv2
 from math import cos, sin
 import albumentations as albu
 import numpy as np
 import torch
+import h5py
 import torch.nn as nn
 from models import load_model
+from training_and_testing.validate import create_model, load_pretrain_model
 
 def draw_axis(img, yaw, pitch, roll, tdx=None, tdy=None, size=80):
     """
@@ -160,7 +163,10 @@ def visualize(model, dir_imgs, label_box_imgs, save_imgs_path=None, save_video_p
 
         # print(height, width)
         img_name = os.path.basename(img_path)
-        label_name = img_name.replace(".png", ".txt")
+        if img_name.split(".")[-1] == "jpg":
+            label_name = img_name.replace(".jpg", ".txt")
+        else:
+            label_name = img_name.replace(".png", ".txt")
         label_path = os.path.join(label_box_imgs, label_name)
         bboxs = get_bbox_YOLO_format(label_path, width, height)
         poses = []
@@ -194,6 +200,7 @@ def visualize(model, dir_imgs, label_box_imgs, save_imgs_path=None, save_video_p
             # predict
             preds = model(cropped_frame)
             preds = preds.cpu().detach().numpy()
+            
             poses.append(preds[0])
             labeled_bboxs.append(bbox)
         # print(bboxs)
@@ -215,6 +222,153 @@ def visualize(model, dir_imgs, label_box_imgs, save_imgs_path=None, save_video_p
     # print(len(list_label_boxs))
     if save_video_path:
         generate_video(save_imgs_path, save_video_path)
+
+def visualize_fusion(uni_model, var_model, wei_model, dir_imgs, label_box_imgs, save_imgs_path=None, save_video_path=None, save_cropped_path=None, target_size_imgs = 64):
+    """
+    input:
+        uni_model:
+        var_model:
+        wei_model:
+        dir_imgs: path to save imgs directory
+        label_box_imgs: path to save bbox directory
+        save_cropped_path: path to save cropped imgs directory
+    output:
+        draw bboxs and poses on images.
+        Export to imgs and video(option)
+    """
+
+    list_imgs = read_frames(dir_imgs)
+    resizer = albu.Compose([albu.SmallestMaxSize(target_size_imgs, p=1.), albu.CenterCrop(target_size_imgs, target_size_imgs, p=1.)])
+    # head_pose_offset = [head_pose_init[0] - camera_yaw, head_pose_init[1] - camera_pitch, head_pose_init[2] - camera_roll]
+    print("[INFO] Drawing ...")
+    for index, img_path in enumerate(tqdm.tqdm(list_imgs[:])):
+        # print(img_path)
+        img = cv2.imread(img_path)
+        height, width, channels = img.shape
+
+        # print(height, width)
+        img_name = os.path.basename(img_path)
+        if img_name.split(".")[-1] == "jpg":
+            label_name = img_name.replace(".jpg", ".txt")
+        else:
+            label_name = img_name.replace(".png", ".txt")
+        label_path = os.path.join(label_box_imgs, label_name)
+        bboxs = get_bbox_YOLO_format(label_path, width, height)
+        poses = []
+        labeled_bboxs = []
+        for index in range(0, len(bboxs)):
+            bbox = bboxs[index]
+            bbox = np.array([bbox[0], bbox[1], bbox[2], bbox[3]])
+            x, y = bbox[:2]
+            w, h = (bbox[2:] - bbox[:2])
+            x, y, w, h = int(x), int(y), int(w), int(h)
+            cropped_frame = img[y:y+h, x:x+w]
+            # Todo: resize frame. If size < 64 then scale up else scale down 
+            # but both methods keep aspect ratio.
+            if w < target_size_imgs or h < target_size_imgs:
+                scale_percent = target_size_imgs / min(w, h)
+                width = int(img.shape[1] * scale_percent)
+                height = int(img.shape[0] * scale_percent)
+            
+            # cv2.imwrite("cropped_frame.jpg", cropped_frame) 
+            # Scale down and crop to target size
+            if cropped_frame.shape[0] == 0 or cropped_frame.shape[1] == 0:
+                continue
+            cropped_frame = resizer(image=cropped_frame)
+            cropped_frame_copy = np.copy(np.array(cropped_frame['image']))
+           
+            cropped_frame = preprocess(np.array(cropped_frame['image']))
+            # print(cropped_frame)
+            # Convert to tensor and transform to [-1, 1]
+            cropped_frame = torch.FloatTensor(cropped_frame).permute(2, 0, 1).unsqueeze_(0)
+            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") 
+            cropped_frame.to(device)
+            # print(cropped_frame.size())
+            # predict
+            
+            uni_preds = uni_model(cropped_frame)
+            var_preds = var_model(cropped_frame)
+            wei_preds = wei_model(cropped_frame)
+
+            preds = uni_preds.add(var_preds).add(wei_preds)/3
+            preds = preds.cpu().detach().numpy()
+            if save_cropped_path:
+                
+                drawed_cropped_img = draw_annotates(cropped_frame_copy, np.array([[0, 0, 63, 63]]), np.array([preds[0]]))
+                absolute_name_img = img_name.split(".")[0]
+                
+                cropped_img_name = f"{absolute_name_img}_{index}.jpg"
+                # print(os.path.join(save_cropped_path, cropped_img_name))
+                cv2.imwrite(os.path.join(save_cropped_path, cropped_img_name), drawed_cropped_img)
+            
+            poses.append(preds[0])
+            labeled_bboxs.append(bbox)
+        # print(bboxs)
+        poses = np.array(poses)
+        labeled_bboxs = np.array(labeled_bboxs)
+        # print(poses)
+        drawed_img = draw_annotates(img, labeled_bboxs, poses)
+        if save_imgs_path:
+            cv2.imwrite(os.path.join(save_imgs_path, img_name), drawed_img)
+
+        # print(img_name)
+        # print(f"[INFO] Head sensor: [{head_poses['yaw']}, {head_poses['pitch']}, {head_poses['pitch']}]")
+        # print(f"[INFO] Head init: [{head_pose_init[0], head_pose_init[1], head_pose_init[2]}]")
+        # # print(f"[INFO] Camera sensor: [{camera_yaw}, {camera_pitch}, {camera_roll}]")
+        # print(f"[INFO] Img pose: [{head_yaw}, {head_pitch}, {head_roll}]")
+        
+        # print(label_path)
+    # print(len(list_imgs))
+    # print(len(list_label_boxs))
+    if save_video_path:
+        generate_video(save_imgs_path, save_video_path)
+
+def visualize_HDF5(model, HDF5_path, save_imgs_path=None, save_video_path=None, target_size_imgs = 64,):
+    data = h5py.File(HDF5_path)
+
+    print("[INFO] Drawing ...")
+    for index in tqdm.tqdm(range(0, 2000)):
+        # print(img_path)
+        img = np.copy(data["images"][index][:,:,::-1])
+        height, width, channels = img.shape
+
+        # print(height, width)
+        poses = []
+        labeled_bboxs = []
+        
+        cropped_frame = preprocess(np.array(img))
+        # print(cropped_frame)
+        # Convert to tensor and transform to [-1, 1]
+        cropped_frame = torch.FloatTensor(cropped_frame).permute(2, 0, 1).unsqueeze_(0)
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") 
+        cropped_frame.to(device)
+        # print(cropped_frame.size())
+        # predict
+        preds = model(cropped_frame)
+        preds = preds.cpu().detach().numpy()
+        poses.append(preds[0])
+        labeled_bboxs.append([0, 0, 63, 63])
+        # print(bboxs)
+        poses = np.array(poses)
+        labeled_bboxs = np.array(labeled_bboxs)
+        # print(poses)
+        drawed_img = draw_annotates(img, labeled_bboxs, poses)
+        img_name = f"{index}.jpg"
+        if save_imgs_path:
+            cv2.imwrite(os.path.join(save_imgs_path, img_name), drawed_img)
+
+        # print(img_name)
+        # print(f"[INFO] Head sensor: [{head_poses['yaw']}, {head_poses['pitch']}, {head_poses['pitch']}]")
+        # print(f"[INFO] Head init: [{head_pose_init[0], head_pose_init[1], head_pose_init[2]}]")
+        # # print(f"[INFO] Camera sensor: [{camera_yaw}, {camera_pitch}, {camera_roll}]")
+        # print(f"[INFO] Img pose: [{head_yaw}, {head_pitch}, {head_roll}]")
+        
+        # print(label_path)
+    # print(len(list_imgs))
+    # print(len(list_label_boxs))
+    if save_video_path:
+        generate_video(save_imgs_path, save_video_path)
+
 
 # Video Generating function 
 def generate_video(imgs_path, saved_video_path):
@@ -247,27 +401,185 @@ def generate_video(imgs_path, saved_video_path):
     cv2.destroyAllWindows()  
     video.release()  # releasing the video generated 
 
-    
+def visualize_AFLW2000(model, base_dir, target_size, filename, save_imgs_path):
+    print("[INFO] Initing ALFW2000Dataset.")
+    base_dir = Path(base_dir)
+    target_size = target_size
+
+    img_paths = []
+    bboxs = []
+    labels = []
+    pred_poses = []
+
+
+    with open(base_dir / filename) as f:
+        for i, line in enumerate(tqdm.tqdm(f.readlines()[:])):
+            ls = line.strip()
+
+            mat_path = base_dir / ls.replace('.jpg', '.mat')
+            bbox, pose = get_pt_ypr_from_mat(mat_path, pt3d=True)
+
+            if True and (abs(pose[0])>99 or abs(pose[1])>99 or abs(pose[2])>99):
+                continue
+
+            labels.append(np.array(pose))
+            bboxs.append(bbox)
+            img_paths.append(ls)
+
+    resizer = albu.Compose([albu.SmallestMaxSize(target_size, p=1.),
+                                        albu.CenterCrop(target_size, target_size, p=1.)])
+
+    for index in tqdm.tqdm(range(0, len(img_paths[:]))):
+        img_path = base_dir /  img_paths[index]
+        img_name = os.path.basename(img_paths[index])
+        # print(img_path)
+        bbox = change_bbox(bboxs[index], 2, use_forehead=False)
+        # bbox = bboxs[index]
+        raw_img = Image.open(img_path)
+        img = np.array(raw_img.crop(bbox))
+        img = img[:,:,::-1]
+
+        img = resizer(image=img)
+        img = preprocess(np.array(img['image']))
+        # print(img)
+        # Convert to tensor and transform to [-1, 1]
+        img = torch.FloatTensor(img).permute(2, 0, 1).unsqueeze_(0)
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") 
+        img.to(device)
+        
+
+        pred = model(img)
+        pred = pred.cpu().detach().numpy()
+        pred_poses.append(pred[0])
+
+        if save_imgs_path:
+            # print(bbox)
+            # print(pred[0])
+            b, g, r = raw_img.split()
+            raw_img = Image.merge("RGB", (r, g, b))
+            drawed_img = draw_annotates(np.array(raw_img), np.array([bbox]), np.array([pred[0]]))
+            cv2.imwrite(os.path.join(save_imgs_path, img_name), drawed_img)
+
+    pred_poses = np.array(pred_poses)  
+    labels = np.array(labels)
+
+    delta = np.absolute(labels - pred_poses)
+    delta = np.sum(delta, axis=1) / 3
+    # print(delta)
+
+    sortted_delta = np.sort(delta)
+    # print(sortted_delta)
+    index_of_max_delta = [np.where(delta==value_delta) for value_delta in sortted_delta[-5:]]
+    index_of_min_delta = [np.where(delta==value_delta) for value_delta in sortted_delta[:5]]
+
+    max_delta_dir = os.path.join(save_imgs_path, "max_delta")
+    os.system(f"rm -rf \"{max_delta_dir}\"")
+
+    min_delta_dir = os.path.join(save_imgs_path, "min_delta")
+    os.system(f"rm -rf \"{min_delta_dir}\"")
+
+    # print(index_of_max_delta)
+    for index in index_of_max_delta:
+        # print(index[0][0])
+        Path(max_delta_dir).mkdir(parents=True, exist_ok=True)
+
+        img_name = os.path.basename(img_paths[index[0][0]])
+        path_drawed_img = os.path.join(save_imgs_path, img_name)
+
+        os.system(f"cp -i \"{path_drawed_img}\" \"{max_delta_dir}\"")
+
+    for index in index_of_min_delta:
+        # print(index[0][0])
+
+        Path(min_delta_dir).mkdir(parents=True, exist_ok=True)
+
+        img_name = os.path.basename(img_paths[index[0][0]])
+        path_drawed_img = os.path.join(save_imgs_path, img_name)
+
+        os.system(f"cp -i \"{path_drawed_img}\" \"{min_delta_dir}\"")
+
 
 if __name__ == "__main__":
-    dir_imgs = "/media/2tb/projects/VL's/headpose_data/CCTV_Shophouse/raw_frames"
-    label_box_imgs = "/media/2tb/projects/VL's/headpose_data/CCTV_Shophouse/labeled_faces"
-    model_path = "/media/2tb/projects/VL's/FSANet/models/fsanet_MSE_HDF5_CMU_300WLP/model_epoch_88_10.852409601211548.pth"
+    # dir_imgs = "/media/2tb/projects/VL's/headpose_data/CCTV_Shophouse/raw_frames"
+    # label_box_imgs = "/media/2tb/projects/VL's/headpose_data/CCTV_Shophouse/labeled_faces"
+    # config_model_path = "/home/linhnv/projects/fsanet_pytorch/config/fsanet_wrapped_colab_CMU.yaml"
+
+    # dir_imgs = "/media/2tb/projects/VL's/headpose_data/CMU_28_10s/raw_frames"
+    # label_box_imgs = "/media/2tb/projects/VL's/headpose_data/CMU_28_10s/labeled_faces"
+    # model_path = "/media/2tb/projects/VL's/FSANet/models/fsanet_MSE_HDF5_CMU_300WLP/model_epoch_88_10.852409601211548.pth"
+    # config_model_path = "/home/linhnv/projects/fsanet_pytorch/config/fsanet_wrapped_colab_CMU.yaml"
+
+    # dir_imgs = "/media/2tb/projects/VL's/headpose_data/CMU_23_30s/raw_frames"
+    # label_box_imgs = "/media/2tb/projects/VL's/headpose_data/CMU_23_30s/labeled_faces"
+    # model_path = "/media/2tb/projects/VL's/FSANet/models/fsanet_MSE_HDF5_CMU_300WLP/model_epoch_88_10.852409601211548.pth"
+    # config_model_path = "/home/linhnv/projects/fsanet_pytorch/config/fsanet_wrapped_colab_CMU.yaml"
+
+    dir_imgs = "/media/2tb/projects/VL's/headpose_data/AILab_mask_nomask/raw_frames"
+    label_box_imgs = "/media/2tb/projects/VL's/headpose_data/AILab_mask_nomask/labeled_faces"
+    # model_path = "/media/2tb/projects/VL's/FSANet/models/fsanet_MSE_HDF5_CMU_300WLP/model_epoch_88_10.852409601211548.pth"
     config_model_path = "/home/linhnv/projects/fsanet_pytorch/config/fsanet_wrapped_colab_CMU.yaml"
 
-    save_dir = "/media/2tb/projects/VL's/headpose_data/CCTV_Shophouse"
+    # dir_imgs = "/media/2tb/projects/VL's/headpose_data/CMU_23_30s/raw_frames"
+    # label_box_imgs = "/media/2tb/projects/VL's/headpose_data/CMU_23_30s/CMU_23_30s_labeled_faces_lech_duoi"
+    # model_path = "/media/2tb/projects/VL's/FSANet/models/fsanet_MSE_HDF5_top_CMU_300WLP/model_epoch_98_11.402141273021698.pth"
+    # config_model_path = "/home/linhnv/projects/fsanet_pytorch/config/fsanet_wrapped_colab_CMU.yaml"
+
+    # dir_imgs = "/media/2tb/projects/VL's/headpose_data/Demo_office_JP_CX_18s/raw_frames"
+    # label_box_imgs = "/media/2tb/projects/VL's/headpose_data/Demo_office_JP_CX_18s/labeled_faces"
+    # model_path = "/media/2tb/projects/VL's/FSANet/models/fsanet_MSE_HDF5_CMU_300WLP/model_epoch_88_10.852409601211548.pth"
+    # config_model_path = "/home/linhnv/projects/fsanet_pytorch/config/fsanet_wrapped_colab_CMU.yaml"
+
+
+
+    # save_imgs_AFLW2000_path = "/media/2tb/projects/VL's/headpose_data/drawed_AFLW2000"
+
+    # 1x1
+    # uni_model_path = "/home/linhnv/projects/fsanet_pytorch/model/mse_300WLP/uni_model.pth"
+    # uni_model_path = "/home/linhnv/projects/fsanet_pytorch/model/wrapped_300WLP/uni_model.pth"
+    # uni_model_path = "/home/linhnv/projects/fsanet_pytorch/model/mse_cmu/uni_model.pth"
+    # uni_model_path = "/home/linhnv/projects/fsanet_pytorch/model/mse_uet/uni_model.pth"
+    uni_model_path = "/home/linhnv/projects/fsanet_pytorch/model/mse_uet_113/uni_model.pth"
+
+    # var
+    # var_model_path = "/home/linhnv/projects/fsanet_pytorch/model/mse_300WLP/var_model.pth"
+    # var_model_path = "/home/linhnv/projects/fsanet_pytorch/model/wrapped_300WLP/var_model.pth"
+    # var_model_path = "/home/linhnv/projects/fsanet_pytorch/model/mse_cmu/var_model.pth"
+    # var_model_path = "/home/linhnv/projects/fsanet_pytorch/model/mse_uet/var_model.pth"
+    var_model_path = "/home/linhnv/projects/fsanet_pytorch/model/mse_uet_113/var_model.pth"
+
+    # w/o
+    # wei_model_path = "/home/linhnv/projects/fsanet_pytorch/model/mse_300WLP/wei_model.pth" 
+    # wei_model_path = /home/linhnv/projects/fsanet_pytorch/model/wrapped_300WLP/wei_model.pth
+    # wei_model_path = "/home/linhnv/projects/fsanet_pytorch/model/mse_cmu/wei_model.pth"
+    # wei_model_path = "/home/linhnv/projects/fsanet_pytorch/model/mse_uet/wei_model.pth" 
+    wei_model_path = "/home/linhnv/projects/fsanet_pytorch/model/mse_uet_113/wei_model.pth"
+
+
+    
+    uni_config_path = "/home/linhnv/projects/fsanet_pytorch/config/fsanet_uni_validate.yaml"
+    var_config_path = "/home/linhnv/projects/fsanet_pytorch/config/fsanet_var_validate.yaml"
+    wei_config_path = "/home/linhnv/projects/fsanet_pytorch/config/fsanet_wei_validate.yaml"
+
+    val_dir = "/media/2tb/projects/VL's/UetHeadpose/pre_processed/val_data/"
+    val_name = "CMU_dataset_64x64"
+    val_type = "HDF5_multi"
+
+    save_dir = "/media/2tb/projects/VL's/headpose_data/AILab_mask_nomask"
 
     # data_name = os.path.basename(dir_imgs)
-    data_name = "CCTV_Shophouse_fsanet_MSE"
+    data_name = "fsa_MSE_CMU_fusion"
     save_path = os.path.join(save_dir, data_name)
     
     save_imgs_path = os.path.join(save_path, "processed_imgs")
+    save_cropped_path = os.path.join(save_path, "cropped_imgs")
     save_video_path = os.path.join(save_path, "processed_videos")
     Path(save_dir).mkdir(parents=True, exist_ok=True)
     Path(save_imgs_path).mkdir(parents=True, exist_ok=True)
+    Path(save_cropped_path).mkdir(parents=True, exist_ok=True)
     Path(save_video_path).mkdir(parents=True, exist_ok=True)
+    # Path(save_imgs_AFLW2000_path).mkdir(parents=True, exist_ok=True)
 
-    config = yaml.load(open(config_model_path))
+    config = yaml.load(open(var_config_path))
     net_config = config['Net']
     model = load_model(**net_config)
 
@@ -279,9 +591,30 @@ if __name__ == "__main__":
     if torch.cuda.is_available():
         model = nn.DataParallel(model)
 
-    model.load_state_dict(torch.load(model_path))
+    uni_model, target_size, num_workers, batch_size, n_class = create_model(uni_config_path)
+    var_model, target_size, num_workers, batch_size, n_class = create_model(var_config_path)
+    wei_model, target_size, num_workers, batch_size, n_class = create_model(wei_config_path)
+
+    uni_model = load_pretrain_model(uni_model, uni_model_path)
+    var_model = load_pretrain_model(var_model, var_model_path)
+    wei_model = load_pretrain_model(wei_model, wei_model_path)
+
+    valid_diffs = []
+
+    uni_model.eval()
+    var_model.eval()
+    wei_model.eval()
+
+    model.load_state_dict(torch.load(var_model_path)["model_state_dict"])
     model.eval()
 
     with torch.no_grad():
-        visualize(model, dir_imgs, label_box_imgs, save_imgs_path=save_imgs_path, save_video_path=save_video_path)
-    
+        # visualize(model, dir_imgs, label_box_imgs, save_imgs_path=save_imgs_path, save_video_path=save_video_path)
+        # visualize(model, dir_imgs, label_box_imgs, save_imgs_path=save_imgs_path)
+        # visualize_HDF5(model, "/media/2tb/projects/VL's/UetHeadpose/pre_processed/val_data_01/UETHeadpose_val_64x64_0_2000.hdf5", "/media/2tb/projects/VL's/UetHeadpose/pre_processed/val_data/pred_val_imgs")
+
+        visualize_fusion(uni_model, var_model, wei_model, dir_imgs, label_box_imgs, save_imgs_path=save_imgs_path, save_cropped_path=save_cropped_path)
+
+        # visualize_AFLW2000(model, "/media/2tb/projects/VL's/headpose_data", 64, "aflw2000_filename.txt", save_imgs_AFLW2000_path)
+
+    generate_video("/media/2tb/projects/VL's/headpose_data/AILab_mask_nomask/fsa_MSE_CMU_fusion/cropped_imgs", "/home/linhnv/projects/fsanet_pytorch")

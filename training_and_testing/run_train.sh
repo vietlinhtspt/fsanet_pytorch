@@ -1,1 +1,1 @@
-CUDA_VISIBLE_DEVICES=0 python3 train.py ../config/headpose_fsanet_mse.yaml
+CUDA_VISIBLE_DEVICES=0 python3 train.py ../config/fsanet_uni_MSE_UET.yaml
